@@ -44,6 +44,7 @@ public final class ConcurrentQueryManagerServiceImpl<T extends Query, H extends 
             throw new IllegalStateException("service is in shutdown state. submissions are blocked");
         }
         this.threadPool.submit(() -> {
+            this.submittedTask.decrementAndGet();
             this.inProgressTask.incrementAndGet();
             try {
                 executorService.exec(query, callback);

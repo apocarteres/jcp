@@ -52,8 +52,10 @@ public class GeneralQueryServiceTest {
 
     @Test
     public void testThatCountsExactlyOneSubmittedRequest() throws Exception {
-        MockTextQuery query = new MockTextQuery();
-        managerService.submit(query, Optional.empty());
+        managerService.submit(new MockTextQuery(), Optional.empty());
+        managerService.submit(new MockTextQuery(), Optional.empty());
+        managerService.submit(new MockTextQuery(), Optional.empty());
+        sleep(MockQueryExecutorService.TASK_RUNNING / 2);
         assertEquals(1, managerService.countSubmitted());
     }
 
@@ -162,6 +164,12 @@ public class GeneralQueryServiceTest {
         MockTextQuery task = new MockTextQuery("ping");
         MockTextProduct product = managerService.exec(task);
         assertEquals("pong", product.getResponse());
+    }
+
+    @Test (timeout = 100 + MockQueryExecutorService.TASK_RUNNING)
+    public void testSubmitCounterDecrementsWhenTaskExecuted() throws Exception {
+        managerService.exec(new MockTextQuery("ping"));
+        assertEquals(0, managerService.countSubmitted());
     }
 
 }
