@@ -1,1 +1,1 @@
-#Java Data Scrapping Framework
+#General purpose scrapping framework for Java
