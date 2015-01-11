@@ -1,14 +1,12 @@
 package io.jcp.pipeline.impl;
 
-import io.jcp.bean.Product;
-import io.jcp.bean.Query;
 import io.jcp.pipeline.Pipeline;
 import io.jcp.service.QueryManagerService;
 
 import java.util.Optional;
 import java.util.function.Function;
 
-public final class QueryPipeline<T extends Query, H extends Product<T>> implements Pipeline<T, H> {
+public final class QueryPipeline<T, H> implements Pipeline<T, H> {
 
     private final Optional<Pipeline<T, H>> parent;
     private final Optional<T> query;
@@ -32,7 +30,7 @@ public final class QueryPipeline<T extends Query, H extends Product<T>> implemen
     }
 
     @Override
-    public <F extends Query, K extends Product<F>> Pipeline<F, K>
+    public <F, K> Pipeline<F, K>
     run(Function<? super T, ? extends F> mapper, Class<K> type) {
         return null;
     }

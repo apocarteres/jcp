@@ -1,5 +1,5 @@
 package io.jcp.bean;
 
-public interface Callback<T extends Product> {
-    void call(T product);
+public interface Callback<T, H> {
+    void call(T query, H product);
 }

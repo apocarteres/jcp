@@ -1,8 +1,7 @@
 package io.jcp.listener;
 
-import io.jcp.bean.Query;
 
-public interface TaskLifecycleListener<T extends Query> {
+public interface TaskLifecycleListener<T> {
     default void onSubmit(T request) {
     }
 

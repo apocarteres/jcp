@@ -2,7 +2,7 @@ package io.jcp.bean;
 
 import java.util.Optional;
 
-public class MockTextProduct implements Product<MockTextQuery> {
+public class MockTextProduct{
     private final String response;
     private final Optional<MockTextQuery> query;
 
@@ -18,10 +18,5 @@ public class MockTextProduct implements Product<MockTextQuery> {
 
     public String getResponse() {
         return response;
-    }
-
-    @Override
-    public Optional<MockTextQuery> getQuery() {
-        return query;
     }
 }

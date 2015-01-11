@@ -1,6 +1,6 @@
 package io.jcp.bean;
 
-public class MockTextQuery implements Query {
+public class MockTextQuery {
     private final String request;
 
     public MockTextQuery() {

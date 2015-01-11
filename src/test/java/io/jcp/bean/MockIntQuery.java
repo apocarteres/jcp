@@ -1,6 +1,6 @@
 package io.jcp.bean;
 
-public class MockIntQuery implements Query {
+public class MockIntQuery {
     private final int value;
 
     public MockIntQuery() {

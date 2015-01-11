@@ -1,8 +1,6 @@
 package io.jcp.service.impl;
 
 import io.jcp.bean.Callback;
-import io.jcp.bean.Product;
-import io.jcp.bean.Query;
 import io.jcp.listener.TaskLifecycleListener;
 import io.jcp.service.QueryExecutorService;
 import io.jcp.service.QueryManagerService;
@@ -16,7 +14,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-public final class ConcurrentQueryManagerServiceImpl<T extends Query, H extends Product<T>>
+public final class ConcurrentQueryManagerServiceImpl<T, H>
     implements QueryManagerService<T, H> {
 
     private final ThreadPoolExecutor threadPool;
@@ -39,7 +37,7 @@ public final class ConcurrentQueryManagerServiceImpl<T extends Query, H extends 
     }
 
     @Override
-    public void submit(T query, Optional<Callback<H>> callback) {
+    public void submit(T query, Optional<Callback<T, H>> callback) {
         if (this.shuttingDown.get()) {
             throw new IllegalStateException("service is in shutdown state. submissions are blocked");
         }
@@ -66,8 +64,8 @@ public final class ConcurrentQueryManagerServiceImpl<T extends Query, H extends 
     public H exec(T task) throws InterruptedException {
         Semaphore semaphore = new Semaphore(1);
         Set<H> result = new HashSet<>();
-        Callback<H> callback = t -> {
-            result.add(t);
+        Callback<T, H> callback = (t, p) -> {
+            result.add(p);
             semaphore.release();
         };
         semaphore.acquire();

@@ -2,7 +2,7 @@ package io.jcp.bean;
 
 import java.util.Optional;
 
-public class MockIntProduct implements Product<MockIntQuery> {
+public class MockIntProduct {
     private final int response;
     private final Optional<MockIntQuery> query;
 
@@ -18,10 +18,5 @@ public class MockIntProduct implements Product<MockIntQuery> {
 
     public int getResponse() {
         return response;
-    }
-
-    @Override
-    public Optional<MockIntQuery> getQuery() {
-        return query;
     }
 }
