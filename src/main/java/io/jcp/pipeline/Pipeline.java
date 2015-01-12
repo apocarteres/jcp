@@ -8,7 +8,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-public interface Pipeline<T, H> {
+public interface Pipeline<T, H> extends AutoCloseable {
 
     Pipeline<T, H> run(T query);
 
@@ -31,4 +31,6 @@ public interface Pipeline<T, H> {
 
     Optional<QueryManagerService<T, H>> getService();
 
+    default void close() throws Exception {
+    }
 }
