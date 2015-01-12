@@ -65,7 +65,9 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
         Semaphore semaphore = new Semaphore(1);
         Set<H> result = new HashSet<>();
         Callback<T, H> callback = (t, p) -> {
-            result.add(p);
+            if (p.isPresent()) {
+                result.add(p.get());
+            }
             semaphore.release();
         };
         semaphore.acquire();

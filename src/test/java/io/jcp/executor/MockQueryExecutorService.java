@@ -31,7 +31,7 @@ public class MockQueryExecutorService implements QueryExecutorService<MockTextQu
         }
         this.tasks.add(task);
         if (callback.isPresent()) {
-            callback.get().call(task, new MockTextProduct("pong", Optional.of(task)));
+            callback.get().call(task, Optional.of(new MockTextProduct("pong", Optional.of(task))));
         }
     }
 

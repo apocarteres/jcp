@@ -142,7 +142,7 @@ public class GeneralQueryServiceTest {
         MockTextQuery task = new MockTextQuery("ping");
         Set<String> result = new HashSet<>();
         Callback<MockTextQuery, MockTextProduct> callback = (t, p) ->
-            result.add(p.getResponse());
+            result.add(p.get().getResponse());
         managerService.submit(task, Optional.of(callback));
         managerService.shutdown();
         assertEquals("pong", result.iterator().next());
