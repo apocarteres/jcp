@@ -99,6 +99,6 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
         synchronized (this.shuttingDown) {
             this.shuttingDown.wait();
         }
+        threadPool.shutdown();
     }
-
 }

@@ -41,6 +41,11 @@ public class MockQueryExecutorService implements QueryExecutorService<MockTextQu
         }
     }
 
+    @Override
+    public void shutdown() {
+
+    }
+
     public Stream<MockTextQuery> tasks() {
         return this.tasks.stream();
     }

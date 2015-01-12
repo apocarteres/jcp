@@ -13,5 +13,7 @@ public interface QueryManagerService<T, H> {
 
     long countInProgress();
 
-    void shutdown() throws InterruptedException;
+    default void shutdown() throws InterruptedException {
+    }
+
 }
