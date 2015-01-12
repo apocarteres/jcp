@@ -15,23 +15,29 @@ import static java.lang.Thread.sleep;
 
 public class MockQueryExecutorService implements QueryExecutorService<MockTextQuery, MockTextProduct> {
 
-    public static final int TASK_RUNNING = 1000;
+    public static final int DEFAULT_TASK_RUNNING = 1000;
     private final Queue<MockTextQuery> tasks;
+    private final int taskRunning;
 
     public MockQueryExecutorService() {
+        this(DEFAULT_TASK_RUNNING);
+    }
+
+    public MockQueryExecutorService(int taskRunning) {
+        this.taskRunning = taskRunning;
         this.tasks = new LinkedList<>();
     }
 
     @Override
     public void exec(MockTextQuery task, Optional<Callback<MockTextQuery, MockTextProduct>> callback) {
         try {
-            sleep(TASK_RUNNING);
+            sleep(taskRunning);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         this.tasks.add(task);
         if (callback.isPresent()) {
-            callback.get().call(task, Optional.of(new MockTextProduct("pong", Optional.of(task))));
+            callback.get().call(task, Optional.of(new MockTextProduct(task.getRequest() + "_pong", Optional.of(task))));
         }
     }
 

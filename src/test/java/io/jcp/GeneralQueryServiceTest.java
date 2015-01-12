@@ -55,55 +55,55 @@ public class GeneralQueryServiceTest {
         managerService.submit(new MockTextQuery(), Optional.empty());
         managerService.submit(new MockTextQuery(), Optional.empty());
         managerService.submit(new MockTextQuery(), Optional.empty());
-        sleep(MockQueryExecutorService.TASK_RUNNING / 2);
+        sleep(MockQueryExecutorService.DEFAULT_TASK_RUNNING / 2);
         assertEquals(1, managerService.countSubmitted());
     }
 
-    @Test(timeout = 100 + MockQueryExecutorService.TASK_RUNNING)
+    @Test(timeout = 100 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
     public void testLifecycleListenersWillGetOnSubmitEvent() throws Exception {
         MockTextQuery query = new MockTextQuery();
         managerService.exec(query);
         assertEquals(1, this.lifecycleListener.requests(MockTaskLifecycleListener.Event.SUBMIT).count());
     }
 
-    @Test(timeout = 100 + MockQueryExecutorService.TASK_RUNNING)
+    @Test(timeout = 100 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
     public void testLifecycleListenersWillGetOnConsumeEvent() throws Exception {
         MockTextQuery query = new MockTextQuery();
         managerService.exec(query);
         assertEquals(1, this.lifecycleListener.requests(MockTaskLifecycleListener.Event.EXEC).count());
     }
 
-    @Test(timeout = 100 + MockQueryExecutorService.TASK_RUNNING)
+    @Test(timeout = 100 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
     public void testThatRequestWillBeExecuted() throws Exception {
         MockTextQuery query = new MockTextQuery();
         managerService.exec(query);
         assertEquals(1, this.executorService.tasks().count());
     }
 
-    @Test(timeout = 100 + MockQueryExecutorService.TASK_RUNNING)
+    @Test(timeout = 100 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
     public void testThatNoTasksAfterEverythingWereExecuted() throws Exception {
         MockTextQuery query = new MockTextQuery();
         managerService.exec(query);
         assertEquals(0, this.managerService.countInProgress());
     }
 
-    @Test(timeout = 100 + MockQueryExecutorService.TASK_RUNNING)
+    @Test(timeout = 100 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
     public void testThatInProgressTaskCountWell() throws Exception {
         MockTextQuery query1 = new MockTextQuery();
         MockTextQuery query2 = new MockTextQuery();
         managerService.submit(query1, Optional.empty());
         managerService.submit(query2, Optional.empty());
-        sleep(MockQueryExecutorService.TASK_RUNNING / 2);
+        sleep(MockQueryExecutorService.DEFAULT_TASK_RUNNING / 2);
         assertEquals(2, this.managerService.countInProgress());
     }
 
-    @Test(timeout = 100 + MockQueryExecutorService.TASK_RUNNING)
+    @Test(timeout = 100 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
     public void testThatShutdownMethodWaitsAllCurrentTask() throws Exception {
         MockTextQuery request1 = new MockTextQuery();
         MockTextQuery request2 = new MockTextQuery();
         managerService.submit(request1, Optional.empty());
         managerService.submit(request2, Optional.empty());
-        sleep(MockQueryExecutorService.TASK_RUNNING / 2);
+        sleep(MockQueryExecutorService.DEFAULT_TASK_RUNNING / 2);
         managerService.shutdown();
         assertEquals(0, this.managerService.countInProgress());
     }
@@ -119,12 +119,12 @@ public class GeneralQueryServiceTest {
         }).start();
         for (int i = 0; i < 10; i++) {
             managerService.submit(new MockTextQuery(), Optional.empty());
-            sleep(MockQueryExecutorService.TASK_RUNNING / 2);
+            sleep(MockQueryExecutorService.DEFAULT_TASK_RUNNING / 2);
         }
         assertTrue("service is not allowed to accept submissions after shutdown", false);
     }
 
-    @Test(timeout = 100 + MockQueryExecutorService.TASK_RUNNING)
+    @Test(timeout = 100 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
     public void testThatShutdownDoesNotBlockIfNoTasks() throws Exception {
         managerService.shutdown();
         assertTrue(true);
@@ -137,7 +137,7 @@ public class GeneralQueryServiceTest {
         assertTrue(false);
     }
 
-    @Test(timeout = 100 + MockQueryExecutorService.TASK_RUNNING)
+    @Test(timeout = 100 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
     public void testThatProductWillBeReturnedViaCallback() throws Exception {
         MockTextQuery task = new MockTextQuery("ping");
         Set<String> result = new HashSet<>();
@@ -145,10 +145,10 @@ public class GeneralQueryServiceTest {
             result.add(p.get().getResponse());
         managerService.submit(task, Optional.of(callback));
         managerService.shutdown();
-        assertEquals("pong", result.iterator().next());
+        assertEquals("ping_pong", result.iterator().next());
     }
 
-    @Test(timeout = 100 + MockQueryExecutorService.TASK_RUNNING)
+    @Test(timeout = 100 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
     public void testThatCallbackContainsCorrectQuery() throws Exception {
         MockTextQuery task = new MockTextQuery();
         Set<MockTextQuery> result = new HashSet<>();
@@ -159,14 +159,14 @@ public class GeneralQueryServiceTest {
         assertTrue(task == result.iterator().next());
     }
 
-    @Test(timeout = 100 + MockQueryExecutorService.TASK_RUNNING)
+    @Test(timeout = 100 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
     public void testThatExecReturnsProductWell() throws Exception {
         MockTextQuery task = new MockTextQuery("ping");
         MockTextProduct product = managerService.exec(task);
-        assertEquals("pong", product.getResponse());
+        assertEquals("ping_pong", product.getResponse());
     }
 
-    @Test(timeout = 100 + MockQueryExecutorService.TASK_RUNNING)
+    @Test(timeout = 100 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
     public void testSubmitCounterDecrementsWhenTaskExecuted() throws Exception {
         managerService.exec(new MockTextQuery("ping"));
         assertEquals(0, managerService.countSubmitted());

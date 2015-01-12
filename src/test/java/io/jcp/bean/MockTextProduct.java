@@ -19,4 +19,33 @@ public class MockTextProduct{
     public String getResponse() {
         return response;
     }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        MockTextProduct that = (MockTextProduct) o;
+
+        if (!query.equals(that.query)) return false;
+        if (!response.equals(that.response)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = response.hashCode();
+        result = 31 * result + query.hashCode();
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "MockTextProduct{" +
+            "response='" + response + '\'' +
+            ", query=" + query +
+            '}';
+    }
 }
