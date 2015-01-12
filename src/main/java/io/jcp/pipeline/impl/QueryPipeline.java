@@ -139,4 +139,11 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
     public Optional<QueryManagerService<T, H>> getService() {
         return this.service;
     }
+
+    @Override
+    public void close() throws Exception {
+        if (this.service.isPresent()) {
+            this.service.get().shutdown();
+        }
+    }
 }
