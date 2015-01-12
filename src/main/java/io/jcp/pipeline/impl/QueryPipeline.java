@@ -70,16 +70,10 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
                     if (parentQueries.isPresent()) {
                         queries.get().addAll(parentQueries.get());
                     }
-                } else {
-                    throw new IllegalStateException("service must be specified once");
                 }
             }
             if (!service.isPresent()) {
                 service = parent.get().getService();
-            } else {
-                if (parent.get().getService().isPresent()) {
-                    throw new IllegalStateException("service must be specified once");
-                }
             }
             parent = parent.get().getParent();
         }

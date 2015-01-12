@@ -82,26 +82,6 @@ public class QueryPipelineTest {
         assertTrue(false);
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void testThatServiceMustBeSpecifiedAfterAllQueries() throws Exception {
-        MockTextProduct collect = this.pipeline
-            .run(new MockTextQuery("first"))
-            .using(managerService)
-            .run(new MockTextQuery("second"))
-            .product().get();
-        assertEquals("first_pong", collect.getResponse());
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testThatServiceMustBeSpecifiedJustOnce() throws Exception {
-        MockTextProduct collect = this.pipeline
-            .using(managerService)
-            .run(new MockTextQuery())
-            .using(managerService)
-            .product().get();
-        assertEquals("pong", collect.getResponse());
-    }
-
     @Test (timeout = 300 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
     public void testQueryCollectionWillBeProceedWell() throws Exception {
         int numQueries = Runtime.getRuntime().availableProcessors();
