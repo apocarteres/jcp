@@ -11,6 +11,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -118,15 +119,46 @@ public class QueryPipelineTest {
                 pool, Collections.singleton(this.lifecycleListener),
                 this.executorService
             );
-        List<MockTextProduct> expected = IntStream.range(0, numQueries).mapToObj(
-            i -> new MockTextQuery(Integer.toString(i)))
+        List<MockTextProduct> expected = IntStream.range(0, numQueries)
+            .mapToObj(i -> new MockTextQuery(Integer.toString(i)))
             .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
             .map(q -> new MockTextProduct(q.getRequest() + "_pong", Optional.of(q)))
             .collect(toList());
         List<MockTextProduct> actual = this.pipeline
+            .run(new MockTextQuery("2"))
             .run(new MockTextQuery("0"))
             .run(new MockTextQuery("1"))
-            .run(new MockTextQuery("2"))
+            .using(service)
+            .stream()
+            .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))
+            .collect(toList());
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testThatCollectionAndSeveralQueryWillProceedWell() throws Exception {
+        int numQueries = 3;
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(
+            numQueries, numQueries, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()
+        );
+        ConcurrentQueryManagerServiceImpl<MockTextQuery, MockTextProduct> service =
+            new ConcurrentQueryManagerServiceImpl<>(
+                pool, Collections.singleton(this.lifecycleListener),
+                this.executorService
+            );
+        List<MockTextQuery> queries = IntStream.range(0, numQueries).mapToObj(
+            i -> new MockTextQuery(Integer.toString(i)))
+            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
+            .collect(toList());
+        List<MockTextQuery> e1 = new ArrayList<>(queries);
+        e1.add(new MockTextQuery(Integer.toString(numQueries)));
+        List<MockTextProduct> expected = e1.stream()
+            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
+            .map(q -> new MockTextProduct(q.getRequest() + "_pong", Optional.of(q)))
+            .collect(toList());
+        List<MockTextProduct> actual = this.pipeline
+            .run(queries)
+            .run(new MockTextQuery("3"))
             .using(service)
             .stream()
             .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))

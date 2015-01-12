@@ -63,7 +63,7 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
     @Override
     public H exec(T task) throws InterruptedException {
         Semaphore semaphore = new Semaphore(1);
-        Set<H> result = new HashSet<>();
+        Set<H> result = new HashSet<>(1);
         Callback<T, H> callback = (t, p) -> {
             if (p.isPresent()) {
                 result.add(p.get());

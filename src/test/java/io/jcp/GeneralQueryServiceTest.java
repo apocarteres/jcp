@@ -84,6 +84,7 @@ public class GeneralQueryServiceTest {
     public void testThatNoTasksAfterEverythingWereExecuted() throws Exception {
         MockTextQuery query = new MockTextQuery();
         managerService.exec(query);
+        managerService.shutdown();
         assertEquals(0, this.managerService.countInProgress());
     }
 
