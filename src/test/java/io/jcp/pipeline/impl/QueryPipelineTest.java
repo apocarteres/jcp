@@ -6,7 +6,6 @@ import io.jcp.bean.MockTextProduct;
 import io.jcp.bean.MockTextQuery;
 import io.jcp.executor.MockQueryExecutorService;
 import io.jcp.listener.MockTaskLifecycleListener;
-import io.jcp.service.QueryExecutorService;
 import io.jcp.service.impl.ConcurrentQueryManagerServiceImpl;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -23,7 +22,6 @@ import java.util.stream.IntStream;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 
 @SuppressWarnings("FieldCanBeLocal")
 public class QueryPipelineTest {
@@ -82,8 +80,8 @@ public class QueryPipelineTest {
         assertTrue(false);
     }
 
-    @Test (timeout = 300 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
-    public void testQueryCollectionWillBeProceedWell() throws Exception {
+    @Test(timeout = 300 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
+    public void testQueryCollectionWillProceedWell() throws Exception {
         int numQueries = Runtime.getRuntime().availableProcessors();
         ThreadPoolExecutor pool = new ThreadPoolExecutor(
             numQueries, numQueries, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()
@@ -110,23 +108,30 @@ public class QueryPipelineTest {
     }
 
     @Test
-    @Ignore
-    public void testThatEachQueryWillBeRunViaSpecifiedService() throws Exception {
-        ThreadPoolExecutor slowPool = new ThreadPoolExecutor(1, 1, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
-        QueryExecutorService<MockTextQuery, MockTextProduct> slowExecutor = new MockQueryExecutorService(2000);
-        ConcurrentQueryManagerServiceImpl<MockTextQuery, MockTextProduct> slowService =
+    public void testThatSeveralQueryWillProceedWell() throws Exception {
+        int numQueries = 3;
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(
+            numQueries, numQueries, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()
+        );
+        ConcurrentQueryManagerServiceImpl<MockTextQuery, MockTextProduct> service =
             new ConcurrentQueryManagerServiceImpl<>(
-                slowPool, Collections.singleton(this.lifecycleListener),
-                slowExecutor
+                pool, Collections.singleton(this.lifecycleListener),
+                this.executorService
             );
-
-        MockTextProduct collect = this.pipeline
-            .run(new MockTextQuery("first"))
-            .using(slowService)
-            .run(new MockTextQuery("second"))
-            .using(managerService)
-            .product().get();
-        assertEquals("second_pong", collect.getResponse());
+        List<MockTextProduct> expected = IntStream.range(0, numQueries).mapToObj(
+            i -> new MockTextQuery(Integer.toString(i)))
+            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
+            .map(q -> new MockTextProduct(q.getRequest() + "_pong", Optional.of(q)))
+            .collect(toList());
+        List<MockTextProduct> actual = this.pipeline
+            .run(new MockTextQuery("0"))
+            .run(new MockTextQuery("1"))
+            .run(new MockTextQuery("2"))
+            .using(service)
+            .stream()
+            .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))
+            .collect(toList());
+        assertEquals(expected, actual);
     }
 
 
