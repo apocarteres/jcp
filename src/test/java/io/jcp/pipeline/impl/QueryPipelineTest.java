@@ -54,6 +54,7 @@ public class QueryPipelineTest {
         assertEquals("ping_pong", collect.getResponse());
     }
 
+    //todo #1: perhaps it should transform requests like but it's not obvious yet.
     @Test
     @Ignore
     public void testMapTextProductToIntQueryAndCollectIntProduct() throws Exception {
