@@ -81,9 +81,9 @@ public class QueryPipelineTest {
         assertTrue(false);
     }
 
-    @Test(timeout = 300 + MockQueryExecutorService.DEFAULT_TASK_RUNNING)
+    @Test(timeout = 60000)
     public void testQueryCollectionWillProceedWell() throws Exception {
-        int numQueries = Runtime.getRuntime().availableProcessors();
+        int numQueries = 10;
         ThreadPoolExecutor pool = new ThreadPoolExecutor(
             numQueries, numQueries, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()
         );
