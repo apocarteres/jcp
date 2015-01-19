@@ -45,8 +45,8 @@ public class MockQueryWithEmptyProductExecutorService
     }
 
     @Override
-    public MockTextProduct exec(MockTextQuery task) {
-        return null;
+    public Optional<MockTextProduct> exec(MockTextQuery task) {
+        return Optional.empty();
     }
 
     @Override

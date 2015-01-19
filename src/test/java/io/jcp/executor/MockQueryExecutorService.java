@@ -38,14 +38,16 @@ public class MockQueryExecutorService implements QueryExecutorService<MockTextQu
         this.tasks.add(task);
         if (callback.isPresent()) {
             callback.get().call(
-                task, Optional.of(exec(task))
+                task, exec(task)
             );
         }
     }
 
     @Override
-    public MockTextProduct exec(MockTextQuery task) {
-        return new MockTextProduct(task.getRequest() + "_pong", Optional.of(task));
+    public Optional<MockTextProduct> exec(MockTextQuery task) {
+        return Optional.of(
+            new MockTextProduct(task.getRequest() + "_pong", Optional.of(task))
+        );
     }
 
     @Override

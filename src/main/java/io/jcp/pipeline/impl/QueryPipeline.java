@@ -178,7 +178,10 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
                 if (mappers.isEmpty()) {
                     products.add(product);
                 } else {
-                    Function<T, H> download = q -> service.getExecutorService().exec(q);
+                    Function<T, H> download = q -> {
+                        Optional<H> opProduct = service.getExecutorService().exec(q);
+                        return opProduct.get();
+                    };
                     Function<T, H> next = download;
                     for (Function<H, T> mapper : mappers) {
                         next = next.andThen(mapper).andThen(download);
