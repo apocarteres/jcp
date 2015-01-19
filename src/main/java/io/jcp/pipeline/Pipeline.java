@@ -28,13 +28,23 @@ public interface Pipeline<T, H> {
 
     List<H> products();
 
-    Optional<Pipeline<T, H>> getParent();
+    default Optional<Pipeline<T, H>> getParent() {
+        return Optional.empty();
+    }
 
-    Optional<Collection<T>> getQueries();
+    default Optional<Collection<T>> getQueries() {
+        return Optional.empty();
+    }
 
-    Optional<QueryManagerService<T, H>> getService();
+    default Optional<QueryManagerService<T, H>> getService() {
+        return Optional.empty();
+    }
 
-    Optional<QueryCompleteCallback<T, H>> getCompleteCallback();
+    default Optional<QueryCompleteCallback<T, H>> getCompleteCallback() {
+        return Optional.empty();
+    }
 
-    Optional<Function<H, T>> getProductMapper();
+    default Optional<Function<H, T>> getProductMapper() {
+        return Optional.empty();
+    }
 }
