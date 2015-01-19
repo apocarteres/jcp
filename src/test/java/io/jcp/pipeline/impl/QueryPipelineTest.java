@@ -123,7 +123,7 @@ public class QueryPipelineTest {
         assertEquals(expected, products);
     }
 
-    @Test
+    @Test (timeout = 5000)
     public void testThatMappedQueryCanBeMappedAgain() throws Exception {
         ThreadPoolExecutor pool = new ThreadPoolExecutor(
             10, 10, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()
@@ -133,7 +133,7 @@ public class QueryPipelineTest {
                 pool, Collections.singleton(this.lifecycleListener),
                 this.executorService
             );
-        List<MockTextQuery> queries = IntStream.range(0, 1).mapToObj(
+        List<MockTextQuery> queries = IntStream.range(0, 10).mapToObj(
             i -> new MockTextQuery("ping" + Integer.toString(i)))
             .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
             .collect(toList());

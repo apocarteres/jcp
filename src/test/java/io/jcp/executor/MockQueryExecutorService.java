@@ -30,11 +30,6 @@ public class MockQueryExecutorService implements QueryExecutorService<MockTextQu
 
     @Override
     public void exec(MockTextQuery task, Optional<Callback<MockTextQuery, MockTextProduct>> callback) {
-        try {
-            sleep(taskRunning);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         this.tasks.add(task);
         if (callback.isPresent()) {
             callback.get().call(
@@ -45,6 +40,11 @@ public class MockQueryExecutorService implements QueryExecutorService<MockTextQu
 
     @Override
     public Optional<MockTextProduct> exec(MockTextQuery task) {
+        try {
+            sleep(taskRunning);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         return Optional.of(
             new MockTextProduct(task.getRequest() + "_pong", Optional.of(task))
         );
