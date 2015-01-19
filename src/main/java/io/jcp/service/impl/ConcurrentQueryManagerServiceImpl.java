@@ -126,6 +126,7 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
                 throw new IllegalStateException("failed to wait", e);
             }
         }
+        this.executorService.shutdown();
     }
 
     private static void acquire(Semaphore s) {
