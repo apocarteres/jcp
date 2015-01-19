@@ -13,17 +13,18 @@ import java.util.stream.Stream;
 import static java.lang.Thread.sleep;
 
 
-public class MockQueryExecutorService implements QueryExecutorService<MockTextQuery, MockTextProduct> {
+public class MockQueryWithEmptyProductExecutorService
+    implements QueryExecutorService<MockTextQuery, MockTextProduct> {
 
     public static final int DEFAULT_TASK_RUNNING = 1000;
     private final Queue<MockTextQuery> tasks;
     private final int taskRunning;
 
-    public MockQueryExecutorService() {
+    public MockQueryWithEmptyProductExecutorService() {
         this(DEFAULT_TASK_RUNNING);
     }
 
-    public MockQueryExecutorService(int taskRunning) {
+    public MockQueryWithEmptyProductExecutorService(int taskRunning) {
         this.taskRunning = taskRunning;
         this.tasks = new LinkedList<>();
     }
@@ -38,14 +39,14 @@ public class MockQueryExecutorService implements QueryExecutorService<MockTextQu
         this.tasks.add(task);
         if (callback.isPresent()) {
             callback.get().call(
-                task, Optional.of(exec(task))
+                task, Optional.empty()
             );
         }
     }
 
     @Override
     public MockTextProduct exec(MockTextQuery task) {
-        return new MockTextProduct(task.getRequest() + "_pong", Optional.of(task));
+        return null;
     }
 
     @Override

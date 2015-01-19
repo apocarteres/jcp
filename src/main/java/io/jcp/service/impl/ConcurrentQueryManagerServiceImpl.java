@@ -6,13 +6,13 @@ import io.jcp.service.QueryExecutorService;
 import io.jcp.service.QueryManagerService;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
+import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class ConcurrentQueryManagerServiceImpl<T, H>
     implements QueryManagerService<T, H> {
@@ -37,15 +37,25 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
     }
 
     @Override
-    public void submit(T query, Optional<Callback<T, H>> callback) {
+    public Future<Optional<H>> submit(T query, Optional<Callback<T, H>> callback) {
         if (this.shuttingDown.get()) {
             throw new IllegalStateException("service is in shutdown state. submissions are blocked");
         }
-        this.threadPool.submit(() -> {
+        Future<Optional<H>> submit = this.threadPool.submit(() -> {
             this.submittedTask.decrementAndGet();
             this.inProgressTask.incrementAndGet();
+            AtomicReference<Optional<H>> futureCb = new AtomicReference<>();
+            Semaphore s = new Semaphore(1);
+            acquire(s);
             try {
-                executorService.exec(query, callback);
+                executorService.exec(query, Optional.of((q, p) -> {
+                    futureCb.set(p);
+                    if (callback.isPresent()) {
+                        callback.get().call(q, p);
+                    }
+                    s.release();
+                }));
+                acquire(s);
                 taskLifecycleListeners.forEach(l -> l.onExec(query));
             } finally {
                 this.inProgressTask.decrementAndGet();
@@ -54,27 +64,35 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
                         this.shuttingDown.notifyAll();
                     }
                 }
+                s.release();
             }
+            return futureCb.get();
         });
         taskLifecycleListeners.forEach(l -> l.onSubmit(query));
         this.submittedTask.incrementAndGet();
+        return submit;
     }
 
     @Override
-    public H exec(T task) throws InterruptedException {
+    public Future<Optional<H>> submit(T query) {
+        return submit(query, Optional.empty());
+    }
+
+    @Override
+    public H exec(T task) {
         Semaphore semaphore = new Semaphore(1);
-        Set<H> result = new HashSet<>(1);
+        AtomicReference<H> product = new AtomicReference<>();
         Callback<T, H> callback = (t, p) -> {
             if (p.isPresent()) {
-                result.add(p.get());
+                product.set(p.get());
             }
             semaphore.release();
         };
-        semaphore.acquire();
+        acquire(semaphore);
         submit(task, Optional.of(callback));
-        semaphore.acquire();
+        acquire(semaphore);
         semaphore.release();
-        return result.iterator().next();
+        return product.get();
     }
 
     @Override
@@ -88,7 +106,12 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
     }
 
     @Override
-    public void shutdown() throws InterruptedException {
+    public QueryExecutorService<T, H> getExecutorService() {
+        return this.executorService;
+    }
+
+    @Override
+    public void shutdown() {
         if (this.shuttingDown.get()) {
             throw new IllegalStateException("already is in shutdown state");
         }
@@ -97,7 +120,19 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
             return;
         }
         synchronized (this.shuttingDown) {
-            this.shuttingDown.wait();
+            try {
+                this.shuttingDown.wait();
+            } catch (InterruptedException e) {
+                throw new IllegalStateException("failed to wait", e);
+            }
+        }
+    }
+
+    private static void acquire(Semaphore s) {
+        try {
+            s.acquire();
+        } catch (InterruptedException e) {
+            throw new IllegalStateException("can't acquire semaphore", e);
         }
     }
 }

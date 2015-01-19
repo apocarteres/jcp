@@ -1,33 +1,29 @@
 package io.jcp.pipeline.impl;
 
-import io.jcp.bean.MockIntProduct;
-import io.jcp.bean.MockIntQuery;
 import io.jcp.bean.MockTextProduct;
 import io.jcp.bean.MockTextQuery;
 import io.jcp.executor.MockQueryExecutorService;
+import io.jcp.executor.MockQueryWithEmptyProductExecutorService;
 import io.jcp.listener.MockTaskLifecycleListener;
+import io.jcp.pipeline.Pipeline;
 import io.jcp.service.impl.ConcurrentQueryManagerServiceImpl;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 @SuppressWarnings("FieldCanBeLocal")
 public class QueryPipelineTest {
 
-    private QueryPipeline<MockTextQuery, MockTextProduct> pipeline;
+    private Pipeline<MockTextQuery, MockTextProduct> pipeline;
     private ConcurrentQueryManagerServiceImpl<MockTextQuery, MockTextProduct> managerService;
     private ThreadPoolExecutor threadPoolExecutor;
     private MockTaskLifecycleListener lifecycleListener;
@@ -54,16 +50,107 @@ public class QueryPipelineTest {
         assertEquals("ping_pong", collect.getResponse());
     }
 
-    //todo #1: perhaps it should transform requests like but it's not obvious yet.
     @Test
-    @Ignore
-    public void testMapTextProductToIntQueryAndCollectIntProduct() throws Exception {
-        MockIntProduct collect = this.pipeline
+    public void testThatCallbackAfterQueryIsDoneWillBeInvokedWithProduct() throws Exception {
+        Set<String> result = new HashSet<>();
+        this.pipeline
             .run(new MockTextQuery("ping"))
+            .on((q, p) -> result.add(q.getRequest() + p.get().getResponse()))
             .using(managerService)
-            .run(p -> new MockIntQuery(p.hashCode()), MockIntProduct.class)
-            .product().get();
-        assertEquals("ping_pong".length(), collect.getResponse());
+            .product();
+        assertEquals("pingping_pong", result.iterator().next());
+    }
+
+    @Test
+    public void testThatMapWorksCorrect() throws Exception {
+        Optional<MockTextProduct> product = this.pipeline
+            .run(new MockTextQuery("ping"))
+            .run(p -> new MockTextQuery(p.getResponse().concat("_map")))
+            .using(managerService)
+            .product();
+        assertEquals("ping_pong_map_pong", product.get().getResponse());
+    }
+
+    @Test (timeout = 5000)
+    public void testThatMappedQueryRunsConcurrently() throws Exception {
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(
+            10, 10, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()
+        );
+        ConcurrentQueryManagerServiceImpl<MockTextQuery, MockTextProduct> service =
+            new ConcurrentQueryManagerServiceImpl<>(
+                pool, Collections.singleton(this.lifecycleListener),
+                this.executorService
+            );
+        List<MockTextQuery> queries = IntStream.range(0, 10).mapToObj(
+            i -> new MockTextQuery("ping" + Integer.toString(i)))
+            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
+            .collect(toList());
+        List<MockTextProduct> expected = queries.stream()
+            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
+            .map(q -> new MockTextProduct(q.getRequest() + "_pong_map_pong", Optional.of(
+                new MockTextQuery(q.getRequest() + "_pong_map")
+            )))
+            .collect(toList());
+        List<MockTextProduct> products = this.pipeline
+            .run(queries)
+            .run(p -> new MockTextQuery(p.getResponse().concat("_map")))
+            .using(service)
+            .stream()
+            .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))
+            .collect(toList());
+        assertEquals(expected, products);
+    }
+
+    @Test
+    public void testThatMappedQueryCanBeMappedAgain() throws Exception {
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(
+            10, 10, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()
+        );
+        ConcurrentQueryManagerServiceImpl<MockTextQuery, MockTextProduct> service =
+            new ConcurrentQueryManagerServiceImpl<>(
+                pool, Collections.singleton(this.lifecycleListener),
+                this.executorService
+            );
+        List<MockTextQuery> queries = IntStream.range(0, 1).mapToObj(
+            i -> new MockTextQuery("ping" + Integer.toString(i)))
+            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
+            .collect(toList());
+        List<MockTextProduct> expected = queries.stream()
+            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
+            .map(q -> new MockTextProduct(q.getRequest() + "_pong_map_pong_remap_pong", Optional.of(
+                new MockTextQuery(q.getRequest() + "_pong_map_pong_remap")
+            )))
+            .collect(toList());
+        List<MockTextProduct> products = this.pipeline
+            .run(queries)
+            .run(p -> new MockTextQuery(p.getResponse().concat("_map")))
+            .run(p -> new MockTextQuery(p.getResponse().concat("_remap")))
+            .using(service)
+            .stream()
+            .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))
+            .collect(toList());
+        assertEquals(expected, products);
+    }
+
+    @Test
+    public void testThatCallbackAfterQueryIsDoneWillBeInvokedWithEmptyProduct() throws Exception {
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(
+            1, 1, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()
+        );
+        MockQueryWithEmptyProductExecutorService executorService =
+            new MockQueryWithEmptyProductExecutorService();
+        ConcurrentQueryManagerServiceImpl<MockTextQuery, MockTextProduct> service =
+            new ConcurrentQueryManagerServiceImpl<>(
+                pool, Collections.singleton(this.lifecycleListener),
+                executorService
+            );
+        AtomicBoolean result = new AtomicBoolean(true);
+        this.pipeline
+            .run(new MockTextQuery("ping"))
+            .on((q, p) -> result.set(p.isPresent()))
+            .using(service)
+            .product();
+        assertFalse("product must be empty", result.get());
     }
 
     @Test(expected = IllegalStateException.class)

@@ -3,17 +3,23 @@ package io.jcp.service;
 import io.jcp.bean.Callback;
 
 import java.util.Optional;
+import java.util.concurrent.Future;
+import java.util.function.Function;
 
 public interface QueryManagerService<T, H> {
-    void submit(T task, Optional<Callback<T, H>> callback);
+    Future<Optional<H>> submit(T task, Optional<Callback<T, H>> callback);
 
-    H exec(T task) throws InterruptedException;
+    Future<Optional<H>> submit(T query);
+
+    H exec(T task);
 
     long countSubmitted();
 
     long countInProgress();
 
-    default void shutdown() throws InterruptedException {
+    QueryExecutorService<T, H> getExecutorService();
+
+    default void shutdown() {
     }
 
 }
