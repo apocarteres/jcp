@@ -101,6 +101,28 @@ public class QueryPipelineTest {
         assertEquals(expected, products);
     }
 
+    @Test (timeout = 30000)
+    public void testThatMappedQueryRunsSeqOnSingleThread() throws Exception {
+        List<MockTextQuery> queries = IntStream.range(0, 5).mapToObj(
+            i -> new MockTextQuery("ping" + Integer.toString(i)))
+            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
+            .collect(toList());
+        List<MockTextProduct> expected = queries.stream()
+            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
+            .map(q -> new MockTextProduct(q.getRequest() + "_pong_map_pong", Optional.of(
+                new MockTextQuery(q.getRequest() + "_pong_map")
+            )))
+            .collect(toList());
+        List<MockTextProduct> products = this.pipeline
+            .run(queries)
+            .run(p -> new MockTextQuery(p.getResponse().concat("_map")))
+            .using(managerService)
+            .stream()
+            .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))
+            .collect(toList());
+        assertEquals(expected, products);
+    }
+
     @Test
     public void testThatMappedQueryCanBeMappedAgain() throws Exception {
         ThreadPoolExecutor pool = new ThreadPoolExecutor(

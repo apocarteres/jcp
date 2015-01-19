@@ -131,35 +131,6 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
             throw new IllegalStateException("at least one query must be specified");
         }
         return processQueries(queries, callbacks, mappers, service).stream();
-//        while (parent.isPresent()) {
-//            if (!queries.isPresent()) {
-//                queries = parent.get().getQueries();
-//            } else {
-//                if (service.isPresent()) {
-//                    Optional<Collection<T>> parentQueries = parent.get().getQueries();
-//                    if (parentQueries.isPresent()) {
-//                        queries.get().addAll(parentQueries.get());
-//                    }
-//                }
-//            }
-//            if (!service.isPresent()) {
-//                service = parent.get().getService();
-//            }
-//            if (!listener.isPresent()) {
-//                listener = parent.get().getCompleteCallback();
-//            }
-//            if (!mapper.isPresent()) {
-//                mapper = parent.get().getProductMapper();
-//            }
-//            parent = parent.get().getParent();
-//        }
-//        if (!queries.isPresent()) {
-//            throw new IllegalStateException("at least one query must be specified");
-//        }
-//        if (!service.isPresent()) {
-//            throw new IllegalStateException("service must be specified");
-//        }
-//        return null;//invokeQueries(queries, service, listener, mapper);
     }
 
     private Queue<H> processQueries(
@@ -200,47 +171,6 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
         semaphore.release(length);
         return products;
     }
-
-//    private Stream<H> invokeQueries(
-//        Optional<Collection<T>> queries, Optional<QueryManagerService<T, H>> service,
-//        Optional<QueryCompleteCallback<T, H>> listener, Optional<ProductMapper<H, T>> mapper) {
-//        QueryManagerService<T, H> effectiveService = service.get();
-//        int factor = mapper.isPresent() ? 2 : 1;
-//        int length = queries.get().size() * factor;
-//        Collection<H> result = new ConcurrentLinkedQueue<>();
-//        Semaphore semaphore = new Semaphore(length);
-//        try {
-//            semaphore.acquire(length);
-//        } catch (InterruptedException e) {
-//            throw new IllegalStateException("exception occurred during pipeline running", e);
-//        }
-//        queries.get().forEach(q -> {
-//            effectiveService.submit(q, Optional.of((query, product) -> {
-//                if (product.isPresent()) {
-//                    if (mapper.isPresent()) {
-//                        T mappedQuery = mapper.get().map(product.get());
-//                        effectiveService.submit(mappedQuery, Optional.of((x, z) -> {
-//                            result.add(z.get());
-//                            semaphore.release();
-//                        }));
-//                    } else {
-//                        result.add(product.get());
-//                    }
-//                }
-//                if (listener.isPresent()) {
-//                    listener.get().onComplete(query, product);
-//                }
-//                semaphore.release();
-//            }));
-//        });
-//        try {
-//            semaphore.acquire(length);
-//        } catch (InterruptedException e) {
-//            throw new IllegalStateException("exception occurred during pipeline running", e);
-//        }
-//        semaphore.release();
-//        return result.stream();
-//    }
 
     private static void acquireLock(Semaphore s, int length) {
         try {
