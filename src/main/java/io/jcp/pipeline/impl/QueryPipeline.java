@@ -148,32 +148,22 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
                 products.add(p.get());
             }
         });
-        if (mappers.isEmpty()) {
-            queries.forEach(
-                q -> service.submit(q, Optional.of((query, product) -> {
-                    callback.get().call(query, product);
-                    callbacks.forEach(c -> c.onComplete(query, product));
-                    semaphore.release();
-                }))
-            );
-        } else {
-            Function<T, H> download = q -> {
-                H h = service.getExecutorService().exec(q).get();
-                callbacks.forEach(c -> c.onComplete(q, Optional.of(h)));
-                return h;
-            };
-            Function<T, H> next = download;
-            for (Function<H, T> mapper : mappers) {
-                next = next.andThen(mapper).andThen(download);
-            }
-            Function<T, H> effectiveNext = next;
-            queries.forEach(q -> {
-                service.submit(q, effectiveNext, Optional.of((query, product) -> {
-                    callback.get().call(q, product);
-                    semaphore.release();
-                }));
-            });
+        Function<T, H> download = q -> {
+            Optional<H> exec = service.getExecutorService().exec(q);
+            callbacks.forEach(c -> c.onComplete(q, exec));
+            return exec.isPresent() ? exec.get() : null;
+        };
+        Function<T, H> next = download;
+        for (Function<H, T> mapper : mappers) {
+            next = next.andThen(mapper).andThen(download);
         }
+        Function<T, H> effectiveNext = next;
+        queries.forEach(q -> {
+            service.submit(q, effectiveNext, Optional.of((query, product) -> {
+                callback.get().call(q, product);
+                semaphore.release();
+            }));
+        });
         acquireLock(semaphore, length);
         semaphore.release(length);
         return products;

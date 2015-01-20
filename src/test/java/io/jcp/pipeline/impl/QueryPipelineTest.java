@@ -177,7 +177,7 @@ public class QueryPipelineTest {
         assertEquals(expected, actual);
     }
 
-    @Test
+    @Test(timeout = 30000)
     public void testThatCallbackAfterQueryIsDoneWillBeInvokedWithEmptyProduct() throws Exception {
         ThreadPoolExecutor pool = new ThreadPoolExecutor(
             1, 1, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()
