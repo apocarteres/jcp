@@ -1,7 +1,7 @@
 package io.jcp.service.impl;
 
 import io.jcp.bean.Callback;
-import io.jcp.listener.TaskLifecycleListener;
+import io.jcp.listener.QueryLifecycleListener;
 import io.jcp.service.QueryExecutorService;
 import io.jcp.service.QueryManagerService;
 
@@ -19,18 +19,18 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
     implements QueryManagerService<T, H> {
 
     private final ThreadPoolExecutor threadPool;
-    private final Collection<TaskLifecycleListener<T>> taskLifecycleListeners;
+    private final Collection<QueryLifecycleListener<T>> queryLifecycleListeners;
     private final QueryExecutorService<T, H> executorService;
     private final AtomicLong submittedTask;
     private final AtomicLong inProgressTask;
     private final AtomicBoolean shuttingDown;
 
     public ConcurrentQueryManagerServiceImpl(
-        ThreadPoolExecutor threadPool, Collection<TaskLifecycleListener<T>> taskLifecycleListeners,
+        ThreadPoolExecutor threadPool, Collection<QueryLifecycleListener<T>> queryLifecycleListeners,
         QueryExecutorService<T, H> executorService
     ) {
         this.threadPool = threadPool;
-        this.taskLifecycleListeners = taskLifecycleListeners;
+        this.queryLifecycleListeners = queryLifecycleListeners;
         this.executorService = executorService;
         this.submittedTask = new AtomicLong();
         this.inProgressTask = new AtomicLong();
@@ -69,7 +69,7 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
                 if (callback.isPresent()) {
                     callback.get().call(query, product);
                 }
-                taskLifecycleListeners.forEach(l -> l.onExec(query));
+                queryLifecycleListeners.forEach(l -> l.onExec(query));
             } finally {
                 this.inProgressTask.decrementAndGet();
                 if (this.inProgressTask.get() == 0 && this.shuttingDown.get()) {
@@ -80,7 +80,7 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
             }
             return product;
         });
-        taskLifecycleListeners.forEach(l -> l.onSubmit(query));
+        queryLifecycleListeners.forEach(l -> l.onSubmit(query));
         this.submittedTask.incrementAndGet();
         return submit;
     }

@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.stream.Stream;
 
-public class MockTaskLifecycleListener implements TaskLifecycleListener<MockTextQuery> {
+public class MockQueryLifecycleListener implements QueryLifecycleListener<MockTextQuery> {
 
     public enum Event {
         SUBMIT, EXEC
@@ -16,7 +16,7 @@ public class MockTaskLifecycleListener implements TaskLifecycleListener<MockText
 
     private final Map<Event, Queue<MockTextQuery>> tasks;
 
-    public MockTaskLifecycleListener() {
+    public MockQueryLifecycleListener() {
         this.tasks = new EnumMap<>(Event.class);
     }
 

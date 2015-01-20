@@ -4,7 +4,7 @@ import io.jcp.bean.Callback;
 import io.jcp.bean.MockTextProduct;
 import io.jcp.bean.MockTextQuery;
 import io.jcp.executor.MockQueryExecutorService;
-import io.jcp.listener.MockTaskLifecycleListener;
+import io.jcp.listener.MockQueryLifecycleListener;
 import io.jcp.service.impl.ConcurrentQueryManagerServiceImpl;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,14 +25,14 @@ public class ConcurrentQueryManagerServiceImplTest {
 
     @SuppressWarnings("FieldCanBeLocal")
     private ThreadPoolExecutor threadPool;
-    private MockTaskLifecycleListener lifecycleListener;
+    private MockQueryLifecycleListener lifecycleListener;
     private ConcurrentQueryManagerServiceImpl<MockTextQuery, MockTextProduct> managerService;
     private MockQueryExecutorService executorService;
 
     @Before
     public void setUp() throws Exception {
         this.threadPool = new ThreadPoolExecutor(2, 2, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
-        this.lifecycleListener = new MockTaskLifecycleListener();
+        this.lifecycleListener = new MockQueryLifecycleListener();
         this.executorService = new MockQueryExecutorService();
         this.managerService = new ConcurrentQueryManagerServiceImpl<>(
             this.threadPool, Collections.singleton(this.lifecycleListener),
@@ -63,14 +63,14 @@ public class ConcurrentQueryManagerServiceImplTest {
     public void testLifecycleListenersWillGetOnSubmitEvent() throws Exception {
         MockTextQuery query = new MockTextQuery();
         managerService.exec(query);
-        assertEquals(1, this.lifecycleListener.requests(MockTaskLifecycleListener.Event.SUBMIT).count());
+        assertEquals(1, this.lifecycleListener.requests(MockQueryLifecycleListener.Event.SUBMIT).count());
     }
 
     @Test(timeout = 60000)
     public void testLifecycleListenersWillGetOnConsumeEvent() throws Exception {
         MockTextQuery query = new MockTextQuery();
         managerService.exec(query);
-        assertEquals(1, this.lifecycleListener.requests(MockTaskLifecycleListener.Event.EXEC).count());
+        assertEquals(1, this.lifecycleListener.requests(MockQueryLifecycleListener.Event.EXEC).count());
     }
 
     @Test(timeout = 60000)
