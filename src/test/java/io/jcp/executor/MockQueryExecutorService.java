@@ -1,8 +1,6 @@
 package io.jcp.executor;
 
 import io.jcp.bean.Callback;
-import io.jcp.bean.MockTextProduct;
-import io.jcp.bean.MockTextQuery;
 import io.jcp.service.QueryExecutorService;
 
 import java.util.LinkedList;
@@ -13,10 +11,10 @@ import java.util.stream.Stream;
 import static java.lang.Thread.sleep;
 
 
-public class MockQueryExecutorService implements QueryExecutorService<MockTextQuery, MockTextProduct> {
+public abstract class MockQueryExecutorService<T, H> implements QueryExecutorService<T, H> {
 
     public static final int DEFAULT_TASK_RUNNING = 1000;
-    private final Queue<MockTextQuery> tasks;
+    private final Queue<T> tasks;
     private final int taskRunning;
 
     public MockQueryExecutorService() {
@@ -29,7 +27,7 @@ public class MockQueryExecutorService implements QueryExecutorService<MockTextQu
     }
 
     @Override
-    public void exec(MockTextQuery task, Optional<Callback<MockTextQuery, MockTextProduct>> callback) {
+    public void exec(T task, Optional<Callback<T, H>> callback) {
         this.tasks.add(task);
         if (callback.isPresent()) {
             callback.get().call(
@@ -39,15 +37,13 @@ public class MockQueryExecutorService implements QueryExecutorService<MockTextQu
     }
 
     @Override
-    public Optional<MockTextProduct> exec(MockTextQuery task) {
+    public Optional<H> exec(T task) {
         try {
             sleep(taskRunning);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        return Optional.of(
-            new MockTextProduct(task.getRequest() + "_pong", Optional.of(task))
-        );
+        return Optional.of(build(task));
     }
 
     @Override
@@ -55,7 +51,9 @@ public class MockQueryExecutorService implements QueryExecutorService<MockTextQu
 
     }
 
-    public Stream<MockTextQuery> tasks() {
+    protected abstract H build(T query);
+
+    public Stream<T> tasks() {
         return this.tasks.stream();
     }
 }

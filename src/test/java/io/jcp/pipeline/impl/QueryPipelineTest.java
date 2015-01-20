@@ -2,8 +2,8 @@ package io.jcp.pipeline.impl;
 
 import io.jcp.bean.MockTextProduct;
 import io.jcp.bean.MockTextQuery;
-import io.jcp.executor.MockQueryExecutorService;
 import io.jcp.executor.MockQueryWithEmptyProductExecutorService;
+import io.jcp.executor.MockTextQueryExecutorService;
 import io.jcp.listener.MockTaskLifecycleListener;
 import io.jcp.pipeline.Pipeline;
 import io.jcp.service.impl.ConcurrentQueryManagerServiceImpl;
@@ -27,14 +27,14 @@ public class QueryPipelineTest {
     private ConcurrentQueryManagerServiceImpl<MockTextQuery, MockTextProduct> managerService;
     private ThreadPoolExecutor threadPoolExecutor;
     private MockTaskLifecycleListener lifecycleListener;
-    private MockQueryExecutorService executorService;
+    private MockTextQueryExecutorService executorService;
 
     @Before
     public void setUp() throws Exception {
         this.pipeline = new QueryPipeline<>();
         this.threadPoolExecutor = new ThreadPoolExecutor(1, 1, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
         this.lifecycleListener = new MockTaskLifecycleListener();
-        this.executorService = new MockQueryExecutorService();
+        this.executorService = new MockTextQueryExecutorService();
         this.managerService = new ConcurrentQueryManagerServiceImpl<>(
             this.threadPoolExecutor, Collections.singleton(this.lifecycleListener),
             this.executorService
