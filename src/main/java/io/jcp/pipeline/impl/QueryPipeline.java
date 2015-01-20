@@ -3,8 +3,6 @@ package io.jcp.pipeline.impl;
 import io.jcp.bean.Callback;
 import io.jcp.pipeline.Pipeline;
 import io.jcp.pipeline.callback.QueryCompleteCallback;
-import io.jcp.pipeline.factory.PipelineFactory;
-import io.jcp.pipeline.factory.impl.QueryPipelineFactory;
 import io.jcp.service.QueryManagerService;
 
 import java.util.*;
@@ -22,42 +20,33 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
     private final Optional<QueryCompleteCallback<T, H>> queryCompleteCallback;
     private final Optional<QueryManagerService<T, H>> service;
     private final Optional<Function<H, T>> mapper;
-    private final PipelineFactory<T, H> factory;
 
     public QueryPipeline(
         Optional<Pipeline<T, H>> parent,
         Optional<Collection<T>> queries,
         Optional<QueryManagerService<T, H>> service,
         Optional<QueryCompleteCallback<T, H>> queryCompleteCallback,
-        Optional<Function<H, T>> mapper,
-        PipelineFactory<T, H> factory
+        Optional<Function<H, T>> mapper
     ) {
         this.parent = parent;
         this.queries = queries;
         this.service = service;
         this.queryCompleteCallback = queryCompleteCallback;
         this.mapper = mapper;
-        this.factory = factory;
     }
 
     public QueryPipeline() {
-        this(new QueryPipelineFactory<>());
-    }
-
-    public QueryPipeline(PipelineFactory<T, H> factory) {
         this(
             Optional.empty(),
             Optional.empty(),
             Optional.empty(),
             Optional.empty(),
-            Optional.empty(),
-            factory
-        );
+            Optional.empty());
     }
 
     @Override
     public Pipeline<T, H> run(T query) {
-        return factory.create(
+        return new QueryPipeline<>(
             Optional.of(this),
             Optional.of(new ArrayList<>(Collections.singletonList(query))),
             Optional.empty(),
@@ -68,7 +57,7 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
 
     @Override
     public Pipeline<T, H> run(Collection<T> query) {
-        return factory.create(
+        return new QueryPipeline<>(
             Optional.of(this),
             Optional.of(query),
             Optional.empty(),
@@ -80,7 +69,7 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
     @Override
     public Pipeline<T, H>
     run(Function<H, T> mapper) {
-        return factory.create(
+        return new QueryPipeline<>(
             Optional.of(this),
             Optional.empty(),
             Optional.empty(),
@@ -91,7 +80,7 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
 
     @Override
     public Pipeline<T, H> using(QueryManagerService<T, H> service) {
-        return factory.create(
+        return new QueryPipeline<>(
             Optional.of(this),
             Optional.empty(),
             Optional.of(service),
@@ -102,7 +91,7 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
 
     @Override
     public Pipeline<T, H> on(QueryCompleteCallback<T, H> listener) {
-        return factory.create(
+        return new QueryPipeline<>(
             Optional.of(this),
             Optional.empty(),
             Optional.empty(),
@@ -158,7 +147,6 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
             if (p.isPresent()) {
                 products.add(p.get());
             }
-            semaphore.release();
         });
         Function<T, H> download = q -> {
             Optional<H> exec = service.getExecutorService().exec(q);
@@ -170,8 +158,12 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
             next = next.andThen(mapper).andThen(download);
         }
         Function<T, H> effectiveNext = next;
-        queries.forEach(q ->
-            service.submit(q, effectiveNext, callback));
+        queries.forEach(q -> {
+            service.submit(q, effectiveNext, Optional.of((query, product) -> {
+                callback.get().call(q, product);
+                semaphore.release();
+            }));
+        });
         acquireLock(semaphore, length);
         semaphore.release(length);
         return products;

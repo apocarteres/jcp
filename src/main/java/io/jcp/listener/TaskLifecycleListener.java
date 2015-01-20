@@ -1,7 +1,7 @@
 package io.jcp.listener;
 
 
-public interface QueryLifecycleListener<T> {
+public interface TaskLifecycleListener<T> {
     default void onSubmit(T request) {
     }
 
