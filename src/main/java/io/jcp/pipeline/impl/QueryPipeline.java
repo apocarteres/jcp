@@ -145,28 +145,35 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
         Queue<H> products = new ConcurrentLinkedQueue<>();
         Optional<Callback<T, H>> callback = Optional.of((r, p) -> {
             if (p.isPresent()) {
-                H product = p.get();
-                if (mappers.isEmpty()) {
-                    products.add(product);
-                } else {
-                    Function<T, H> download = q -> {
-                        Optional<H> opProduct = service.getExecutorService().exec(q);
-                        return opProduct.get();
-                    };
-                    Function<T, H> next = download;
-                    for (Function<H, T> mapper : mappers) {
-                        next = next.andThen(mapper).andThen(download);
-                    }
-                    product = next.apply(r);
-                    products.add(product);
-                }
+                products.add(p.get());
             }
-            callbacks.forEach(c -> c.onComplete(r, p));
-            semaphore.release();
         });
-        queries.forEach(q -> {
-            service.submit(q, callback);
-        });
+        if (mappers.isEmpty()) {
+            queries.forEach(
+                q -> service.submit(q, Optional.of((query, product) -> {
+                    callback.get().call(query, product);
+                    callbacks.forEach(c -> c.onComplete(query, product));
+                    semaphore.release();
+                }))
+            );
+        } else {
+            Function<T, H> download = q -> {
+                H h = service.getExecutorService().exec(q).get();
+                callbacks.forEach(c -> c.onComplete(q, Optional.of(h)));
+                return h;
+            };
+            Function<T, H> next = download;
+            for (Function<H, T> mapper : mappers) {
+                next = next.andThen(mapper).andThen(download);
+            }
+            Function<T, H> effectiveNext = next;
+            queries.forEach(q -> {
+                service.submit(q, effectiveNext, Optional.of((query, product) -> {
+                    callback.get().call(q, product);
+                    semaphore.release();
+                }));
+            });
+        }
         acquireLock(semaphore, length);
         semaphore.release(length);
         return products;

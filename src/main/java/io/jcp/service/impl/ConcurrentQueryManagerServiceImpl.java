@@ -13,6 +13,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 public final class ConcurrentQueryManagerServiceImpl<T, H>
     implements QueryManagerService<T, H> {
@@ -38,24 +39,36 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
 
     @Override
     public Future<Optional<H>> submit(T query, Optional<Callback<T, H>> callback) {
+        Function<T, H> f = q -> {
+            Semaphore s = new Semaphore(1);
+            AtomicReference<Optional<H>> futureCb = new AtomicReference<>();
+            acquire(s);
+            executorService.exec(query, Optional.of((r, p) -> {
+                futureCb.set(p);
+                s.release();
+            }));
+            acquire(s);
+            s.release();
+            Optional<H> h = futureCb.get();
+            return h.isPresent() ? h.get() : null;
+        };
+        return submit(query, f, callback);
+    }
+
+    @Override
+    public Future<Optional<H>> submit(T query, Function<T, H> f, Optional<Callback<T, H>> callback) {
         if (this.shuttingDown.get()) {
             throw new IllegalStateException("service is in shutdown state. submissions are blocked");
         }
         Future<Optional<H>> submit = this.threadPool.submit(() -> {
             this.submittedTask.decrementAndGet();
             this.inProgressTask.incrementAndGet();
-            AtomicReference<Optional<H>> futureCb = new AtomicReference<>();
-            Semaphore s = new Semaphore(1);
-            acquire(s);
+            Optional<H> product = Optional.empty();
             try {
-                executorService.exec(query, Optional.of((q, p) -> {
-                    futureCb.set(p);
-                    if (callback.isPresent()) {
-                        callback.get().call(q, p);
-                    }
-                    s.release();
-                }));
-                acquire(s);
+                product = Optional.ofNullable(f.apply(query));
+                if (callback.isPresent()) {
+                    callback.get().call(query, product);
+                }
                 taskLifecycleListeners.forEach(l -> l.onExec(query));
             } finally {
                 this.inProgressTask.decrementAndGet();
@@ -64,9 +77,8 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
                         this.shuttingDown.notifyAll();
                     }
                 }
-                s.release();
             }
-            return futureCb.get();
+            return product;
         });
         taskLifecycleListeners.forEach(l -> l.onSubmit(query));
         this.submittedTask.incrementAndGet();

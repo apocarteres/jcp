@@ -7,11 +7,13 @@ import java.util.concurrent.Future;
 import java.util.function.Function;
 
 public interface QueryManagerService<T, H> {
-    Future<Optional<H>> submit(T task, Optional<Callback<T, H>> callback);
+    Future<Optional<H>> submit(T query, Optional<Callback<T, H>> callback);
+
+    Future<Optional<H>> submit(T query, Function<T, H> f, Optional<Callback<T, H>> callback);
 
     Future<Optional<H>> submit(T query);
 
-    H exec(T task);
+    H exec(T query);
 
     long countSubmitted();
 

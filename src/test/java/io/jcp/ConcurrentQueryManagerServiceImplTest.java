@@ -21,7 +21,7 @@ import static java.lang.Thread.sleep;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class GeneralQueryServiceTest {
+public class ConcurrentQueryManagerServiceImplTest {
 
     @SuppressWarnings("FieldCanBeLocal")
     private ThreadPoolExecutor threadPool;

@@ -71,7 +71,7 @@ public class QueryPipelineTest {
         assertEquals("ping_pong_map_pong", product.get().getResponse());
     }
 
-    @Test (timeout = 5000)
+    @Test(timeout = 5000)
     public void testThatMappedQueryRunsConcurrently() throws Exception {
         ThreadPoolExecutor pool = new ThreadPoolExecutor(
             10, 10, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()
@@ -101,7 +101,7 @@ public class QueryPipelineTest {
         assertEquals(expected, products);
     }
 
-    @Test (timeout = 30000)
+    @Test(timeout = 30000)
     public void testThatMappedQueryRunsSeqOnSingleThread() throws Exception {
         List<MockTextQuery> queries = IntStream.range(0, 5).mapToObj(
             i -> new MockTextQuery("ping" + Integer.toString(i)))
@@ -123,7 +123,7 @@ public class QueryPipelineTest {
         assertEquals(expected, products);
     }
 
-    @Test (timeout = 5000)
+    @Test(timeout = 5000)
     public void testThatMappedQueryCanBeMappedAgain() throws Exception {
         ThreadPoolExecutor pool = new ThreadPoolExecutor(
             10, 10, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()
@@ -152,6 +152,29 @@ public class QueryPipelineTest {
             .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))
             .collect(toList());
         assertEquals(expected, products);
+    }
+
+    @Test(timeout = 30000)
+    public void testThatCompleteCallbackWillBeInvokedForQueryAndEachMapping() throws Exception {
+        List<MockTextQuery> queries = IntStream.range(0, 1).mapToObj(
+            i -> new MockTextQuery("ping" + Integer.toString(i)))
+            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
+            .collect(toList());
+        List<String> expected = new ArrayList<>();
+        queries.stream().forEach(q -> {
+            expected.add(q.getRequest() + q.getRequest() + "_pong");
+            expected.add(q.getRequest() + "_pong_map" + q.getRequest() + "_pong_map_pong");
+        });
+        List<String> actual = new ArrayList<>();
+        this.pipeline
+            .run(queries)
+            .run(p -> new MockTextQuery(p.getResponse().concat("_map")))
+            .on((q, p) -> actual.add(q.getRequest() + p.get().getResponse()))
+            .using(managerService)
+            .stream()
+            .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))
+            .collect(toList());
+        assertEquals(expected, actual);
     }
 
     @Test
