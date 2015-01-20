@@ -147,6 +147,7 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
             if (p.isPresent()) {
                 products.add(p.get());
             }
+            semaphore.release();
         });
         Function<T, H> download = q -> {
             Optional<H> exec = service.getExecutorService().exec(q);
@@ -158,12 +159,8 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
             next = next.andThen(mapper).andThen(download);
         }
         Function<T, H> effectiveNext = next;
-        queries.forEach(q -> {
-            service.submit(q, effectiveNext, Optional.of((query, product) -> {
-                callback.get().call(q, product);
-                semaphore.release();
-            }));
-        });
+        queries.forEach(q ->
+            service.submit(q, effectiveNext, callback));
         acquireLock(semaphore, length);
         semaphore.release(length);
         return products;
