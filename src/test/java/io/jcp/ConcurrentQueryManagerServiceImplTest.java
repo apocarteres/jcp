@@ -3,9 +3,8 @@ package io.jcp;
 import io.jcp.bean.Callback;
 import io.jcp.bean.MockTextProduct;
 import io.jcp.bean.MockTextQuery;
-import io.jcp.executor.MockQueryExecutorService;
-import io.jcp.executor.MockTextQueryExecutorService;
-import io.jcp.listener.MockTaskLifecycleListener;
+import io.jcp.listener.MockQueryLifecycleListener;
+import io.jcp.provider.MockProvider;
 import io.jcp.service.impl.ConcurrentQueryManagerServiceImpl;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,18 +25,18 @@ public class ConcurrentQueryManagerServiceImplTest {
 
     @SuppressWarnings("FieldCanBeLocal")
     private ThreadPoolExecutor threadPool;
-    private MockTaskLifecycleListener lifecycleListener;
+    private MockQueryLifecycleListener lifecycleListener;
     private ConcurrentQueryManagerServiceImpl<MockTextQuery, MockTextProduct> managerService;
-    private MockTextQueryExecutorService executorService;
 
     @Before
     public void setUp() throws Exception {
-        this.threadPool = new ThreadPoolExecutor(2, 2, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
-        this.lifecycleListener = new MockTaskLifecycleListener();
-        this.executorService = new MockTextQueryExecutorService();
+        this.threadPool = new ThreadPoolExecutor(
+            2, 2, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()
+        );
+        this.lifecycleListener = new MockQueryLifecycleListener();
         this.managerService = new ConcurrentQueryManagerServiceImpl<>(
             this.threadPool, Collections.singleton(this.lifecycleListener),
-            this.executorService
+            new MockProvider()
         );
     }
 
@@ -56,29 +55,24 @@ public class ConcurrentQueryManagerServiceImplTest {
         managerService.submit(new MockTextQuery(), Optional.empty());
         managerService.submit(new MockTextQuery(), Optional.empty());
         managerService.submit(new MockTextQuery(), Optional.empty());
-        sleep(MockQueryExecutorService.DEFAULT_TASK_RUNNING / 2);
+        sleep(MockProvider.FETCH_DELAY / 2);
         assertEquals(1, managerService.countSubmitted());
-    }
-
-    @Test(timeout = 60000)
-    public void testLifecycleListenersWillGetOnSubmitEvent() throws Exception {
-        MockTextQuery query = new MockTextQuery();
-        managerService.exec(query);
-        assertEquals(1, this.lifecycleListener.requests(MockTaskLifecycleListener.Event.SUBMIT).count());
     }
 
     @Test(timeout = 60000)
     public void testLifecycleListenersWillGetOnConsumeEvent() throws Exception {
         MockTextQuery query = new MockTextQuery();
         managerService.exec(query);
-        assertEquals(1, this.lifecycleListener.requests(MockTaskLifecycleListener.Event.EXEC).count());
+        assertEquals(1, this.lifecycleListener.requests(
+            MockQueryLifecycleListener.Event.EXEC).count()
+        );
     }
 
     @Test(timeout = 60000)
     public void testThatRequestWillBeExecuted() throws Exception {
         MockTextQuery query = new MockTextQuery();
-        managerService.exec(query);
-        assertEquals(1, this.executorService.tasks().count());
+        Optional<MockTextProduct> exec = managerService.exec(query);
+        assertEquals(new MockTextProduct("_pong", Optional.of(query)), exec.get());
     }
 
     @Test(timeout = 60000)
@@ -95,7 +89,7 @@ public class ConcurrentQueryManagerServiceImplTest {
         MockTextQuery query2 = new MockTextQuery();
         managerService.submit(query1, Optional.empty());
         managerService.submit(query2, Optional.empty());
-        sleep(MockQueryExecutorService.DEFAULT_TASK_RUNNING / 2);
+        sleep(MockProvider.FETCH_DELAY / 2);
         assertEquals(2, this.managerService.countInProgress());
     }
 
@@ -105,7 +99,7 @@ public class ConcurrentQueryManagerServiceImplTest {
         MockTextQuery request2 = new MockTextQuery();
         managerService.submit(request1, Optional.empty());
         managerService.submit(request2, Optional.empty());
-        sleep(MockQueryExecutorService.DEFAULT_TASK_RUNNING / 2);
+        sleep(MockProvider.FETCH_DELAY / 2);
         managerService.shutdown();
         assertEquals(0, this.managerService.countInProgress());
     }
@@ -121,7 +115,7 @@ public class ConcurrentQueryManagerServiceImplTest {
         }).start();
         for (int i = 0; i < 10; i++) {
             managerService.submit(new MockTextQuery(), Optional.empty());
-            sleep(MockQueryExecutorService.DEFAULT_TASK_RUNNING / 2);
+            sleep(MockProvider.FETCH_DELAY / 2);
         }
         assertTrue("service is not allowed to accept submissions after shutdown", false);
     }
@@ -164,7 +158,7 @@ public class ConcurrentQueryManagerServiceImplTest {
     @Test(timeout = 60000)
     public void testThatExecReturnsProductWell() throws Exception {
         MockTextQuery task = new MockTextQuery("ping");
-        MockTextProduct product = managerService.exec(task);
+        MockTextProduct product = managerService.exec(task).get();
         assertEquals("ping_pong", product.getResponse());
     }
 

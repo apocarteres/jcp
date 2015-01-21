@@ -1,55 +1,44 @@
 package io.jcp.service.impl;
 
 import io.jcp.bean.Callback;
-import io.jcp.listener.TaskLifecycleListener;
-import io.jcp.service.QueryExecutorService;
+import io.jcp.listener.QueryLifecycleListener;
+import io.jcp.provider.Provider;
 import io.jcp.service.QueryManagerService;
 
 import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.Future;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 public final class ConcurrentQueryManagerServiceImpl<T, H>
     implements QueryManagerService<T, H> {
 
     private final ThreadPoolExecutor threadPool;
-    private final Collection<TaskLifecycleListener<T>> taskLifecycleListeners;
-    private final QueryExecutorService<T, H> executorService;
-    private final AtomicLong submittedTask;
-    private final AtomicLong inProgressTask;
+    private final Collection<QueryLifecycleListener<T>> queryLifecycleListeners;
+    private final Provider<T, H> provider;
+    private final AtomicLong submittedQueries;
+    private final AtomicLong inProgressQueries;
     private final AtomicBoolean shuttingDown;
 
     public ConcurrentQueryManagerServiceImpl(
-        ThreadPoolExecutor threadPool, Collection<TaskLifecycleListener<T>> taskLifecycleListeners,
-        QueryExecutorService<T, H> executorService
+        ThreadPoolExecutor threadPool, Collection<QueryLifecycleListener<T>> queryLifecycleListeners,
+        Provider<T, H> provider
     ) {
         this.threadPool = threadPool;
-        this.taskLifecycleListeners = taskLifecycleListeners;
-        this.executorService = executorService;
-        this.submittedTask = new AtomicLong();
-        this.inProgressTask = new AtomicLong();
+        this.queryLifecycleListeners = queryLifecycleListeners;
+        this.provider = provider;
+        this.submittedQueries = new AtomicLong();
+        this.inProgressQueries = new AtomicLong();
         this.shuttingDown = new AtomicBoolean(false);
     }
 
     @Override
     public Future<Optional<H>> submit(T query, Optional<Callback<T, H>> callback) {
         Function<T, H> f = q -> {
-            Semaphore s = new Semaphore(1);
-            AtomicReference<Optional<H>> futureCb = new AtomicReference<>();
-            acquire(s);
-            executorService.exec(query, Optional.of((r, p) -> {
-                futureCb.set(p);
-                s.release();
-            }));
-            acquire(s);
-            s.release();
-            Optional<H> h = futureCb.get();
+            Optional<H> h = exec(q);
             return h.isPresent() ? h.get() : null;
         };
         return submit(query, f, callback);
@@ -61,18 +50,17 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
             throw new IllegalStateException("service is in shutdown state. submissions are blocked");
         }
         Future<Optional<H>> submit = this.threadPool.submit(() -> {
-            this.submittedTask.decrementAndGet();
-            this.inProgressTask.incrementAndGet();
+            this.submittedQueries.decrementAndGet();
+            this.inProgressQueries.incrementAndGet();
             Optional<H> product = Optional.empty();
             try {
                 product = Optional.ofNullable(f.apply(query));
                 if (callback.isPresent()) {
                     callback.get().call(query, product);
                 }
-                taskLifecycleListeners.forEach(l -> l.onExec(query));
             } finally {
-                this.inProgressTask.decrementAndGet();
-                if (this.inProgressTask.get() == 0 && this.shuttingDown.get()) {
+                this.inProgressQueries.decrementAndGet();
+                if (this.inProgressQueries.get() == 0 && this.shuttingDown.get()) {
                     synchronized (this.shuttingDown) {
                         this.shuttingDown.notifyAll();
                     }
@@ -80,8 +68,8 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
             }
             return product;
         });
-        taskLifecycleListeners.forEach(l -> l.onSubmit(query));
-        this.submittedTask.incrementAndGet();
+        queryLifecycleListeners.forEach(l -> l.onSubmit(query));
+        this.submittedQueries.incrementAndGet();
         return submit;
     }
 
@@ -91,35 +79,20 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
     }
 
     @Override
-    public H exec(T task) {
-        Semaphore semaphore = new Semaphore(1);
-        AtomicReference<H> product = new AtomicReference<>();
-        Callback<T, H> callback = (t, p) -> {
-            if (p.isPresent()) {
-                product.set(p.get());
-            }
-            semaphore.release();
-        };
-        acquire(semaphore);
-        submit(task, Optional.of(callback));
-        acquire(semaphore);
-        semaphore.release();
-        return product.get();
+    public Optional<H> exec(T query) {
+        Optional<H> fetch = this.provider.fetch(query);
+        this.queryLifecycleListeners.forEach(l->l.onExec(query));
+        return fetch;
     }
 
     @Override
     public long countSubmitted() {
-        return submittedTask.get();
+        return submittedQueries.get();
     }
 
     @Override
     public long countInProgress() {
-        return inProgressTask.get();
-    }
-
-    @Override
-    public QueryExecutorService<T, H> getExecutorService() {
-        return this.executorService;
+        return inProgressQueries.get();
     }
 
     @Override
@@ -140,11 +113,4 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
         }
     }
 
-    private static void acquire(Semaphore s) {
-        try {
-            s.acquire();
-        } catch (InterruptedException e) {
-            throw new IllegalStateException("can't acquire semaphore", e);
-        }
-    }
 }

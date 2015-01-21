@@ -13,13 +13,11 @@ public interface QueryManagerService<T, H> {
 
     Future<Optional<H>> submit(T query);
 
-    H exec(T query);
+    Optional<H> exec(T query);
 
     long countSubmitted();
 
     long countInProgress();
-
-    QueryExecutorService<T, H> getExecutorService();
 
     default void shutdown() {
     }

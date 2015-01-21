@@ -149,7 +149,7 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
             }
         });
         Function<T, H> download = q -> {
-            Optional<H> exec = service.getExecutorService().exec(q);
+            Optional<H> exec = service.exec(q);
             callbacks.forEach(c -> c.onComplete(q, exec));
             return exec.isPresent() ? exec.get() : null;
         };
