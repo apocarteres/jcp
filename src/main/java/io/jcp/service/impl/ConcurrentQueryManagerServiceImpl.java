@@ -24,7 +24,8 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
     private final AtomicBoolean shuttingDown;
 
     public ConcurrentQueryManagerServiceImpl(
-        ThreadPoolExecutor threadPool, Collection<QueryLifecycleListener<T>> queryLifecycleListeners,
+        ThreadPoolExecutor threadPool,
+        Collection<QueryLifecycleListener<T>> queryLifecycleListeners,
         Provider<T, H> provider
     ) {
         this.threadPool = threadPool;
@@ -58,6 +59,8 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
                 if (callback.isPresent()) {
                     callback.get().call(query, product);
                 }
+            } catch (Throwable t) {
+                t.printStackTrace();
             } finally {
                 this.inProgressQueries.decrementAndGet();
                 if (this.inProgressQueries.get() == 0 && this.shuttingDown.get()) {

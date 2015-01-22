@@ -165,6 +165,17 @@ public class QueryPipelineTest {
         assertTrue(false);
     }
 
+    @Test(expected = IllegalStateException.class)
+    public void testThatCanNotUserTwoOreMoretServices() throws Exception {
+        QueryManagerService<MockTextQuery, MockTextProduct> service = service();
+        new QueryPipeline<MockTextQuery, MockTextProduct>()
+            .using(service)
+            .using(service)
+            .run(new MockTextQuery())
+            .product().get();
+        assertTrue(false);
+    }
+
     @Test(timeout = 60000)
     public void testQueryCollectionWillProceedWell() throws Exception {
         List<MockTextQuery> queries = IntStream.range(0, 10).mapToObj(
@@ -239,15 +250,22 @@ public class QueryPipelineTest {
     private static Pipeline<MockTextQuery, MockTextProduct> pipeline(
         int threads,
         Provider<MockTextQuery, MockTextProduct> provider) {
+        return new QueryPipeline<MockTextQuery, MockTextProduct>().using(service(threads, provider));
+    }
+
+    private static QueryManagerService<MockTextQuery, MockTextProduct> service(
+        int threads, Provider<MockTextQuery, MockTextProduct> provider) {
         ThreadPoolExecutor threadPoolExecutor =
             new ThreadPoolExecutor(threads, threads, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
         ;
         MockQueryLifecycleListener lifecycleListener = new MockQueryLifecycleListener();
-        QueryManagerService<MockTextQuery, MockTextProduct> service =
-            new ConcurrentQueryManagerServiceImpl<>(
-                threadPoolExecutor, Collections.singleton(lifecycleListener), provider
-            );
-        return new QueryPipeline<MockTextQuery, MockTextProduct>().using(service);
+        return new ConcurrentQueryManagerServiceImpl<>(
+            threadPoolExecutor, Collections.singleton(lifecycleListener), provider
+        );
+    }
+
+    private static QueryManagerService<MockTextQuery, MockTextProduct> service() {
+        return service(1, new MockProvider());
     }
 
 }

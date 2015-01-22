@@ -68,13 +68,13 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
 
     @Override
     public Pipeline<T, H>
-    run(Function<H, T> mapper) {
+    run(Function<H, T> f) {
         return new QueryPipeline<>(
             Optional.of(this),
             Optional.empty(),
             Optional.empty(),
             Optional.empty(),
-            Optional.of(mapper)
+            Optional.of(f)
         );
     }
 
@@ -90,12 +90,12 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
     }
 
     @Override
-    public Pipeline<T, H> on(QueryCompleteCallback<T, H> listener) {
+    public Pipeline<T, H> on(QueryCompleteCallback<T, H> callback) {
         return new QueryPipeline<>(
             Optional.of(this),
             Optional.empty(),
             Optional.empty(),
-            Optional.of(listener),
+            Optional.of(callback),
             Optional.empty()
         );
     }
@@ -127,6 +127,11 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
             .findFirst().orElseThrow(() ->
                 new IllegalStateException("service must be specified"))
             .get();
+        if (pipelines.stream()
+            .filter(p -> p.getService().isPresent())
+            .count() > 1) {
+            throw new IllegalStateException("can't use two or more services");
+        }
         if (queries.isEmpty()) {
             throw new IllegalStateException("at least one query must be specified");
         }
@@ -158,6 +163,7 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
             next = next.andThen(mapper).andThen(download);
         }
         Function<T, H> effectiveNext = next;
+        //noinspection CodeBlock2Expr
         queries.forEach(q -> {
             service.submit(q, effectiveNext, Optional.of((query, product) -> {
                 callback.get().call(q, product);
@@ -175,16 +181,6 @@ public final class QueryPipeline<T, H> implements Pipeline<T, H> {
         } catch (InterruptedException e) {
             throw new IllegalStateException("exception occurred during pipeline running", e);
         }
-    }
-
-    @Override
-    public Optional<H> product() {
-        return stream().findFirst();
-    }
-
-    @Override
-    public List<H> products() {
-        return stream().collect(toList());
     }
 
     @Override

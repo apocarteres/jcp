@@ -2,10 +2,11 @@ package io.jcp.listener;
 
 import io.jcp.bean.MockTextQuery;
 
+import java.util.Collections;
 import java.util.EnumMap;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Stream;
 
 public class MockQueryLifecycleListener implements QueryLifecycleListener<MockTextQuery> {
@@ -17,7 +18,7 @@ public class MockQueryLifecycleListener implements QueryLifecycleListener<MockTe
     private final Map<Event, Queue<MockTextQuery>> tasks;
 
     public MockQueryLifecycleListener() {
-        this.tasks = new EnumMap<>(Event.class);
+        this.tasks = Collections.synchronizedMap(new EnumMap<>(Event.class));
     }
 
     @Override
@@ -35,7 +36,7 @@ public class MockQueryLifecycleListener implements QueryLifecycleListener<MockTe
     }
 
     private void put(Event event, MockTextQuery request) {
-        Queue<MockTextQuery> queue = this.tasks.getOrDefault(event, new LinkedList<>());
+        Queue<MockTextQuery> queue = this.tasks.getOrDefault(event, new ConcurrentLinkedQueue<>());
         queue.add(request);
         this.tasks.put(event, queue);
     }
