@@ -1,9 +1,9 @@
 package io.jcp.service.impl;
 
-import io.jcp.bean.Callback;
+import io.jcp.bean.ExecutionCallback;
 import io.jcp.listener.QueryLifecycleListener;
 import io.jcp.provider.Provider;
-import io.jcp.service.QueryManagerService;
+import io.jcp.service.QueryExecutorService;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -13,8 +13,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-public final class ConcurrentQueryManagerServiceImpl<T, H>
-    implements QueryManagerService<T, H> {
+public final class ConcurrentQueryExecutorService<T, H>
+    implements QueryExecutorService<T, H> {
 
     private final ThreadPoolExecutor threadPool;
     private final Collection<QueryLifecycleListener<T>> queryLifecycleListeners;
@@ -23,7 +23,7 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
     private final AtomicLong inProgressQueries;
     private final AtomicBoolean shuttingDown;
 
-    public ConcurrentQueryManagerServiceImpl(
+    public ConcurrentQueryExecutorService(
         ThreadPoolExecutor threadPool,
         Collection<QueryLifecycleListener<T>> queryLifecycleListeners,
         Provider<T, H> provider
@@ -37,7 +37,9 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
     }
 
     @Override
-    public Future<Optional<H>> submit(T query, Optional<Callback<T, H>> callback) {
+    public Future<Optional<H>> submit(
+        T query, Optional<ExecutionCallback<T, H>> callback
+    ) {
         Function<T, H> f = q -> {
             Optional<H> h = exec(q);
             return h.isPresent() ? h.get() : null;
@@ -46,9 +48,13 @@ public final class ConcurrentQueryManagerServiceImpl<T, H>
     }
 
     @Override
-    public Future<Optional<H>> submit(T query, Function<T, H> f, Optional<Callback<T, H>> callback) {
+    public Future<Optional<H>> submit(
+        T query, Function<T, H> f, Optional<ExecutionCallback<T, H>> callback
+    ) {
         if (this.shuttingDown.get()) {
-            throw new IllegalStateException("service is in shutdown state. submissions are blocked");
+            throw new IllegalStateException(
+                "service is in shutdown state. submissions are blocked"
+            );
         }
         Future<Optional<H>> submit = this.threadPool.submit(() -> {
             this.submittedQueries.decrementAndGet();
