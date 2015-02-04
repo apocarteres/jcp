@@ -18,7 +18,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -436,7 +435,6 @@ public final class ManagedPipelineTest {
         int threads, Provider<MockTextQuery, MockTextProduct> provider) {
         ThreadPoolExecutor threadPoolExecutor =
             new ThreadPoolExecutor(threads, threads, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
-        ;
         MockQueryLifecycleListener lifecycleListener = new MockQueryLifecycleListener();
         return new ManagedQueryExecutorService<>(
             threadPoolExecutor, Collections.singleton(lifecycleListener), provider
@@ -451,7 +449,6 @@ public final class ManagedPipelineTest {
         int threads, Provider<MockIntQuery, MockIntProduct> provider) {
         ThreadPoolExecutor threadPoolExecutor =
             new ThreadPoolExecutor(threads, threads, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
-        ;
         return new ManagedQueryExecutorService<>(
             threadPoolExecutor, Collections.emptyList(), provider
         );
