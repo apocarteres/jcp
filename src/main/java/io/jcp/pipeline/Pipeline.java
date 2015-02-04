@@ -35,13 +35,6 @@ public interface Pipeline<T, H> {
      */
     Pipeline<T, H> run(T query);
 
-    /**
-     * Puts specified queries to pipeline
-     *
-     * @param queries Queries to execution
-     * @return Pipeline initialized with queries
-     */
-    Pipeline<T, H> run(Collection<T> queries);
 
     /**
      * Puts specified function into the pipeline
@@ -55,7 +48,9 @@ public interface Pipeline<T, H> {
      * @return Pipeline initialized with function
      */
     <R, K> Pipeline<R, K>
-    run(Function<H, R> function, Pipeline<R, K> underlying);
+    run(Function<H, R> function,
+        Pipeline<R, K> underlying
+    );
 
     /**
      * Puts specified function into the pipeline
@@ -71,7 +66,9 @@ public interface Pipeline<T, H> {
      * @param service Service to execute queries
      * @return Pipeline initialized with service
      */
-    <R, K> Pipeline<R, K> using(QueryExecutorService<R, K> service);
+    <R, K> Pipeline<R, K> using(
+        QueryExecutorService<R, K> service
+    );
 
     /**
      * Sets up callback to handle query completion
@@ -79,16 +76,9 @@ public interface Pipeline<T, H> {
      * @param callback to handle query completion
      * @return Pipeline initialized with callback
      */
-    Pipeline<T, H> on(QueryCompleteCallback<T, H> callback);
-
-    /**
-     * Fetches products and wrap them into the {@link java.util.stream.Stream}.
-     *
-     * @return {@link java.util.stream.Stream} of objects of type {@link H} known as products
-     */
-    default Stream<H> stream() {
-        return Stream.empty();
-    }
+    Pipeline<T, H> on(
+        QueryCompleteCallback<T, H> callback
+    );
 
     /**
      * Fetches exactly one product
@@ -99,63 +89,6 @@ public interface Pipeline<T, H> {
      * @return {@link java.util.Optional} of object of type {@link H} known as product
      */
     default Optional<H> product() {
-        return stream().findFirst();
-    }
-
-    /**
-     * Fetches all available products
-     * <p>
-     * The order of products in list completely depends on implementation
-     *
-     * @return {@link java.util.List} of objects of type {@link H} known as products
-     */
-    default List<H> products() {
-        return stream().collect(toList());
-    }
-
-    /**
-     * Returns parent pipeline
-     *
-     * @return {@link java.util.Optional} of {@link io.jcp.pipeline.Pipeline}
-     */
-    default Optional<Pipeline<T, H>> getParent() {
-        return Optional.empty();
-    }
-
-    /**
-     * Returns queries of pipeline
-     *
-     * @return {@link java.util.Optional} of objects of type {@link T} known as queries
-     */
-    default Optional<Collection<T>> getQueries() {
-        return Optional.empty();
-    }
-
-    /**
-     * Returns service for executing queries
-     *
-     * @return {@link java.util.Optional} of {@link io.jcp.service.QueryExecutorService}
-     */
-    default Optional<QueryExecutorService<T, H>> getService() {
-        return Optional.empty();
-    }
-
-    /**
-     * Returns callback for handling query executing finish
-     *
-     * @return {@link java.util.Optional} of {@link io.jcp.pipeline.callback.QueryCompleteCallback}
-     */
-    default Optional<QueryCompleteCallback<T, H>> getCompleteCallback() {
-        return Optional.empty();
-    }
-
-    /**
-     * Returns function which transforms product, fetched on previous pipeline step
-     * to new query
-     *
-     * @return {@link java.util.Optional} of {@link java.util.function.Function}
-     */
-    default Optional<Function<H, T>> getProductMapper() {
         return Optional.empty();
     }
 }
