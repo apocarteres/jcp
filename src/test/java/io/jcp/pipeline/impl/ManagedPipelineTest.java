@@ -120,6 +120,15 @@ public final class ManagedPipelineTest {
         );
     }
 
+    @Test(expected = IllegalStateException.class)
+    public void testThatCanNotGetProductsFromEmptyPipeline() throws Exception {
+        pipeline().products();
+        throw new RuntimeException(
+            "can't run empty pipeline"
+        );
+    }
+
+
     @Test(timeout = 30000, expected = IllegalStateException.class)
     public void testThatCanNotRunWithoutQuery() throws Exception {
         pipeline().product();
@@ -165,6 +174,40 @@ public final class ManagedPipelineTest {
         assertEquals(expected, actual);
     }
 
+    @Test
+    public void testThatCallbacksWorkWellOnUnderlyingPipelines() throws Exception {
+        Set<String> actual = Collections.synchronizedSet(new HashSet<>());
+        pipeline(3)
+            .on((x, y) -> actual.add(x.getRequest()))
+            .run(threeTextQueries)
+            .run(p -> new MockIntQuery(pingIndex(p.getResponse())),
+                new QueryPipeline<>()
+                    .using(intService())
+                    .on((x, y) -> actual.add(String.valueOf(x.getValue())))
+            )
+            .run(q -> new MockTextQuery("ok_" + q.getResponse()),
+                new QueryPipeline<>()
+                    .using(textService())
+                    .on((x, y) -> actual.add(x.getRequest()))
+            )
+            .products()
+            .stream()
+            .map(Optional::get)
+            .collect(toSet());
+        Set<String> expected = new HashSet<String>() {{
+            add("1");
+            add("2");
+            add("3");
+            add("ok_1000");
+            add("ok_2000");
+            add("ok_3000");
+            add("ping1");
+            add("ping2");
+            add("ping3");
+        }};
+        assertEquals(expected, actual);
+    }
+
     @Test(timeout = 30000)
     public void testThatMoreThanOneProductWillBeCollectedWell() throws Exception {
         assertEquals(
@@ -177,255 +220,6 @@ public final class ManagedPipelineTest {
                 .collect(toSet())
         );
     }
-
-    //    @Test(timeout = 5000)
-//    public void testThatMappedQueryRunsConcurrently() throws Exception {
-//        List<MockTextQuery> queries = IntStream.range(0, 10).mapToObj(
-//            i -> new MockTextQuery("ping" + Integer.toString(i)))
-//            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
-//            .collect(toList());
-//        List<MockTextProduct> expected = queries.stream()
-//            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
-//            .map(q -> new MockTextProduct(q.getRequest() + "_pong_map_pong", Optional.of(
-//                new MockTextQuery(q.getRequest() + "_pong_map")
-//            )))
-//            .collect(toList());
-//        List<MockTextProduct> products = new QueryPipeline<>()
-//            .using(QueryPipelineTest.textService(10, new MockTextProvider()))
-//            .run(queries)
-//            .run(p -> new MockTextQuery(p.getResponse().concat("_map")))
-//            .stream()
-//            .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))
-//            .collect(toList());
-//        assertEquals(expected, products);
-//    }
-//
-//    @Test(timeout = 30000)
-//    public void testThatMappedQueryRunsSeqOnSingleThread() throws Exception {
-//        List<MockTextQuery> queries = IntStream.range(0, 5).mapToObj(
-//            i -> new MockTextQuery("ping" + Integer.toString(i)))
-//            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
-//            .collect(toList());
-//        List<MockTextProduct> expected = queries.stream()
-//            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
-//            .map(q -> new MockTextProduct(q.getRequest() + "_pong_map_pong", Optional.of(
-//                new MockTextQuery(q.getRequest() + "_pong_map")
-//            )))
-//            .collect(toList());
-//        List<MockTextProduct> products = new QueryPipeline<>()
-//            .using(QueryPipelineTest.textService())
-//            .run(queries)
-//            .run(p -> new MockTextQuery(p.getResponse().concat("_map")))
-//            .stream()
-//            .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))
-//            .collect(toList());
-//        assertEquals(expected, products);
-//    }
-//
-//    @Test(timeout = 5000)
-//    public void testThatMappedQueryCanBeMappedAgain() throws Exception {
-//        List<MockTextQuery> queries = IntStream.range(0, 10).mapToObj(
-//            i -> new MockTextQuery("ping" + Integer.toString(i)))
-//            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
-//            .collect(toList());
-//        List<MockTextProduct> expected = queries.stream()
-//            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
-//            .map(q -> new MockTextProduct(q.getRequest() + "_pong_map_pong_remap_pong", Optional.of(
-//                new MockTextQuery(q.getRequest() + "_pong_map_pong_remap")
-//            )))
-//            .collect(toList());
-//        List<MockTextProduct> products = new QueryPipeline<>()
-//            .using(QueryPipelineTest.textService(10, new MockTextProvider()))
-//            .run(queries)
-//            .run(p -> new MockTextQuery(p.getResponse().concat("_map")))
-//            .run(p -> new MockTextQuery(p.getResponse().concat("_remap")))
-//            .stream()
-//            .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))
-//            .collect(toList());
-//        assertEquals(expected, products);
-//    }
-//
-//    @Test(timeout = 30000)
-//    public void testThatCompleteCallbackWillBeInvokedForQueryAndEachMapping() throws Exception {
-//        List<MockTextQuery> queries = IntStream.range(0, 1).mapToObj(
-//            i -> new MockTextQuery("ping" + Integer.toString(i)))
-//            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
-//            .collect(toList());
-//        List<String> expected = new ArrayList<>();
-//        queries.stream().forEach(q -> {
-//            expected.add(q.getRequest() + q.getRequest() + "_pong");
-//            expected.add(q.getRequest() + "_pong_map" + q.getRequest() + "_pong_map_pong");
-//        });
-//        List<String> actual = new ArrayList<>();
-//        new QueryPipeline<>()
-//            .using(QueryPipelineTest.textService())
-//            .run(queries)
-//            .run(p -> new MockTextQuery(p.getResponse().concat("_map")))
-//            .on((q, p) -> actual.add(q.getRequest() + p.get().getResponse()))
-//            .stream()
-//            .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))
-//            .collect(toList());
-//        assertEquals(expected, actual);
-//    }
-    //    @Test(expected = IllegalStateException.class)
-//    public void testThatCanNotStreamFromEmptyPipeline() throws Exception {
-//        new QueryPipeline<>().stream();
-//        throw new RuntimeException("can't run empty pipeline");
-//    }
-//
-//    @Test(expected = IllegalStateException.class)
-//    public void testThatCanNotGetProductFromEmptyPipeline() throws Exception {
-//        new QueryPipeline<>().product();
-//        throw new RuntimeException("can't run empty pipeline");
-//    }
-//
-//    @Test(expected = IllegalStateException.class)
-//    public void testThatCanNotGetProductsFromEmptyPipeline() throws Exception {
-//        new QueryPipeline<>().products();
-//        throw new RuntimeException("can't run empty pipeline");
-//    }
-    //
-//    @Test
-//    public void testThatUsingServiceForEachRun() throws Exception {
-//        MockTextQuery query = new MockTextQuery("ping");
-//        List<MockTextProduct> actual = new QueryPipeline<>()
-//            .run(query)
-//            .using(textService())
-//            .run(query)
-//            .using(textService(1, new MockTextProvider("_kong")))
-//            .products();
-//        List<MockTextProduct> expected = new ArrayList<>();
-//        expected.add(new MockTextProduct("ping_pong", Optional.of(query)));
-//        expected.add(new MockTextProduct("ping_kong", Optional.of(query)));
-//        assertEquals(expected, actual);
-//    }
-//
-//    @Test
-//    public void testThatEachRunWillBeMapped() throws Exception {
-//        MockTextQuery q1 = new MockTextQuery("ping");
-//        MockTextQuery q2 = new MockTextQuery("king");
-//        List<MockTextProduct> actual = new QueryPipeline<>()
-//            .run(q1)
-//            .using(textService())
-//            .run(i -> new MockTextQuery(i.getResponse() + "_map"))
-//            .run(q2)
-//            .run(i -> new MockTextQuery(i.getResponse() + "_ape"))
-//            .using(textService(1, new MockTextProvider("_kong")))
-//            .products();
-//        List<MockTextProduct> expected = new ArrayList<>();
-//        expected.add(new MockTextProduct("ping_pong_map_pong", Optional.of(new MockTextQuery("ping_pong_map"))));
-//        expected.add(new MockTextProduct("king_kong_ape_kong", Optional.of(new MockTextQuery("king_kong_ape"))));
-//        assertEquals(expected, actual);
-//    }
-
-//    @Test
-//    public void testThatEachRunCollectionWillBeMapped() throws Exception {
-//        List<MockTextQuery> q1 = new ArrayList<MockTextQuery>() {{
-//            add(new MockTextQuery("pingA"));
-//            add(new MockTextQuery("pingB"));
-//        }};
-//        List<MockTextQuery> q2 = new ArrayList<MockTextQuery>() {{
-//            add(new MockTextQuery("kingA"));
-//            add(new MockTextQuery("kingB"));
-//        }};
-//        List<MockTextProduct> actual = new QueryPipeline<>()
-//            .using(textService())
-//            .run(q1)
-//            .run(i -> new MockTextQuery(i.getResponse() + "_map"))
-//            .run(q2)
-//            .run(i -> new MockTextQuery(i.getResponse() + "_ape"))
-//            .using(textService(1, new MockTextProvider("_kong")))
-//            .products();
-//        List<MockTextProduct> expected = new ArrayList<>();
-//        expected.add(new MockTextProduct("pingA_pong_map_pong", Optional.of(new MockTextQuery("pingA_pong_map"))));
-//        expected.add(new MockTextProduct("pingB_pong_map_pong", Optional.of(new MockTextQuery("pingB_pong_map"))));
-//        expected.add(new MockTextProduct("kingA_kong_ape_kong", Optional.of(new MockTextQuery("kingA_kong_ape"))));
-//        expected.add(new MockTextProduct("kingB_kong_ape_kong", Optional.of(new MockTextQuery("kingB_kong_ape"))));
-//        assertEquals(expected, actual);
-//    }
-//
-//    @Test
-//    public void testThatSeveralRunsWillBeMapped() throws Exception {
-//        List<MockTextQuery> q1 = new ArrayList<MockTextQuery>() {{
-//            add(new MockTextQuery("pingA"));
-//            add(new MockTextQuery("pingB"));
-//        }};
-//        List<MockTextQuery> q2 = new ArrayList<MockTextQuery>() {{
-//            add(new MockTextQuery("kingA"));
-//            add(new MockTextQuery("kingB"));
-//        }};
-//        List<MockTextProduct> actual = new QueryPipeline<>()
-//            .using(textService())
-//            .run(q1.get(0))
-//            .run(q1.get(1))
-//            .run(i -> new MockTextQuery(i.getResponse() + "_map"))
-//            .run(q2.get(0))
-//            .run(q2.get(1))
-//            .run(i -> new MockTextQuery(i.getResponse() + "_ape"))
-//            .using(textService(1, new MockTextProvider("_kong")))
-//            .products();
-//        List<MockTextProduct> expected = new ArrayList<>();
-//        expected.add(new MockTextProduct("pingA_pong_map_pong", Optional.of(new MockTextQuery("pingA_pong_map"))));
-//        expected.add(new MockTextProduct("pingB_pong_map_pong", Optional.of(new MockTextQuery("pingB_pong_map"))));
-//        expected.add(new MockTextProduct("kingA_kong_ape_kong", Optional.of(new MockTextQuery("kingA_kong_ape"))));
-//        expected.add(new MockTextProduct("kingB_kong_ape_kong", Optional.of(new MockTextQuery("kingB_kong_ape"))));
-//        assertEquals(expected, actual);
-//    }
-//
-//    @Test
-//    public void testThatGlobalyDefinedServiceWorksForAllRuns() throws Exception {
-//        MockTextQuery q1 = new MockTextQuery("ping");
-//        MockTextQuery q2 = new MockTextQuery("king");
-//        List<MockTextProduct> actual = new QueryPipeline<>()
-//            .using(QueryPipelineTest.textService())
-//            .run(q1)
-//            .run(q2)
-//            .products();
-//        List<MockTextProduct> expected = new ArrayList<>();
-//        expected.add(new MockTextProduct("ping_pong", Optional.of(q1)));
-//        expected.add(new MockTextProduct("king_pong", Optional.of(q2)));
-//        assertEquals(expected, actual);
-//    }
-//
-//    @Test(timeout = 60000)
-//    public void testQueryCollectionWillProceedWell() throws Exception {
-//        List<MockTextQuery> queries = IntStream.range(0, 10).mapToObj(
-//            i -> new MockTextQuery(Integer.toString(i)))
-//            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
-//            .collect(toList());
-//        List<MockTextProduct> expected = queries.stream()
-//            .map(q -> new MockTextProduct(q.getRequest() + "_pong", Optional.of(q)))
-//            .collect(toList());
-//        List<MockTextProduct> actual = new QueryPipeline<>()
-//            .using(QueryPipelineTest.textService(10, new MockTextProvider()))
-//            .run(queries)
-//            .stream()
-//            .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))
-//            .collect(toList());
-//        assertEquals(expected, actual);
-//    }
-    //
-//    @Test(timeout = 30000)
-//    public void testThatCollectionAndSeveralQueryWillProceedWell() throws Exception {
-//        List<MockTextQuery> queries = IntStream.range(0, 3).mapToObj(
-//            i -> new MockTextQuery(Integer.toString(i)))
-//            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
-//            .collect(toList());
-//        List<MockTextQuery> e1 = new ArrayList<>(queries);
-//        e1.add(new MockTextQuery(Integer.toString(3)));
-//        List<MockTextProduct> expected = e1.stream()
-//            .sorted((q1, q2) -> q2.getRequest().compareTo(q1.getRequest()))
-//            .map(q -> new MockTextProduct(q.getRequest() + "_pong", Optional.of(q)))
-//            .collect(toList());
-//        List<MockTextProduct> actual = new QueryPipeline<>()
-//            .using(QueryPipelineTest.textService())
-//            .run(queries)
-//            .run(new MockTextQuery("3"))
-//            .stream()
-//            .sorted((p1, p2) -> p2.getResponse().compareTo(p1.getResponse()))
-//            .collect(toList());
-//        assertEquals(expected, actual);
-//    }
 
     private static QueryExecutorService<MockTextQuery, MockTextProduct> textService() {
         return textService(1, new MockTextProvider());
