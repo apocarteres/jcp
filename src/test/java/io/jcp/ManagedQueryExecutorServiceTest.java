@@ -5,7 +5,7 @@ import io.jcp.bean.MockTextProduct;
 import io.jcp.bean.MockTextQuery;
 import io.jcp.listener.MockQueryLifecycleListener;
 import io.jcp.provider.MockTextProvider;
-import io.jcp.service.impl.ConcurrentQueryExecutorService;
+import io.jcp.service.impl.ManagedQueryExecutorService;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -21,12 +21,12 @@ import static java.lang.Thread.sleep;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class ConcurrentQueryExecutorServiceTest {
+public class ManagedQueryExecutorServiceTest {
 
     @SuppressWarnings("FieldCanBeLocal")
     private ThreadPoolExecutor threadPool;
     private MockQueryLifecycleListener lifecycleListener;
-    private ConcurrentQueryExecutorService<MockTextQuery, MockTextProduct> executorService;
+    private ManagedQueryExecutorService<MockTextQuery, MockTextProduct> executorService;
 
     @Before
     public void setUp() throws Exception {
@@ -34,7 +34,7 @@ public class ConcurrentQueryExecutorServiceTest {
             2, 2, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()
         );
         this.lifecycleListener = new MockQueryLifecycleListener();
-        this.executorService = new ConcurrentQueryExecutorService<>(
+        this.executorService = new ManagedQueryExecutorService<>(
             this.threadPool, Collections.singleton(this.lifecycleListener),
             new MockTextProvider()
         );

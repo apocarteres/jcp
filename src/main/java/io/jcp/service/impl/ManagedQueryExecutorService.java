@@ -3,6 +3,7 @@ package io.jcp.service.impl;
 import io.jcp.bean.ExecutionCallback;
 import io.jcp.listener.QueryLifecycleListener;
 import io.jcp.provider.Provider;
+import io.jcp.service.ConcurrentQueryExecutorService;
 import io.jcp.service.QueryExecutorService;
 
 import java.util.Collection;
@@ -13,8 +14,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-public final class ConcurrentQueryExecutorService<T, H>
-    implements QueryExecutorService<T, H> {
+public final class ManagedQueryExecutorService<T, H>
+    implements ConcurrentQueryExecutorService<T, H> {
 
     private final ThreadPoolExecutor threadPool;
     private final Collection<QueryLifecycleListener<T>> queryLifecycleListeners;
@@ -23,7 +24,7 @@ public final class ConcurrentQueryExecutorService<T, H>
     private final AtomicLong inProgressQueries;
     private final AtomicBoolean shuttingDown;
 
-    public ConcurrentQueryExecutorService(
+    public ManagedQueryExecutorService(
         ThreadPoolExecutor threadPool,
         Collection<QueryLifecycleListener<T>> queryLifecycleListeners,
         Provider<T, H> provider

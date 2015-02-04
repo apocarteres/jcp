@@ -30,7 +30,8 @@ public final class MockTextProvider implements Provider<MockTextQuery, MockTextP
             e.printStackTrace();
         }
         return Optional.of(new MockTextProduct(
-                query.getRequest() + pong, Optional.of(query))
+                query.getRequest() + pong, Optional.of(query)
+            )
         );
     }
 }
