@@ -1,9 +1,26 @@
 apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'idea'
+apply plugin: 'pmd'
+apply plugin: 'findbugs'
+apply plugin: 'checkstyle'
 
 sourceCompatibility = 1.8
 version = '0.1'
+
+checkstyle {
+    toolVersion = '6.0'
+}
+
+pmd {
+    sourceSets = [sourceSets.main]
+    reportsDir = file("$project.buildDir/reports/pmd")
+    ruleSets = [
+            "basic",
+            "braces",
+            "codeSize"
+    ]
+}
 
 repositories {
     mavenCentral()
