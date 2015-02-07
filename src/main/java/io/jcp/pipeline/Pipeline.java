@@ -1,92 +1,122 @@
+/**
+ * Copyright (c) 2015-2016, decipher.ru
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met: 1) Redistributions of source code must retain the above
+ * copyright notice, this list of conditions and the following
+ * disclaimer. 2) Redistributions in binary form must reproduce the above
+ * copyright notice, this list of conditions and the following
+ * disclaimer in the documentation and/or other materials provided
+ * with the distribution. 3) Neither the name of the decipher.ru nor
+ * the names of its contributors may be used to endorse or promote
+ * products derived from this software without specific prior written
+ * permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT
+ * NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+ * THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 package io.jcp.pipeline;
 
 import io.jcp.pipeline.callback.QueryCompleteCallback;
 import io.jcp.service.QueryExecutorService;
-
-import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Stream;
-
-import static java.util.stream.Collectors.toList;
 
 /**
- * <p>The interface which represents the basic abstraction of the
- * sequence of user-defined operations.
+ * The interface which represents the basic abstraction for
+ * sequence of operations.
  * <p>
  * <p>Basically pipeline consumes special objects of type {@link T}, known
- * as queries, applies user operations in defined order on
+ * as queries, applies operations in order of calling on
  * queries and finally builds a product of type {@link H}
- *
  *
  * @param <T> is a type of query
  * @param <H> is a type of product
- * @author Alexander Paderin
- * @since 0.1
+ * @author Alexander Paderin (apocarteres@gmail.com)
+ * @version $Id$
+ * @since 0.10
  */
 public interface Pipeline<T, H> {
 
     /**
-     * Puts specified query to pipeline
+     * Puts specified query to pipeline.
      *
      * @param query Query to execution
      * @return Pipeline initialized with query
      */
     Pipeline<T, H> run(T query);
 
-
     /**
-     * Puts specified function into the pipeline
+     * Puts specified function into the pipeline.
      *
      * Uses underlying pipeline to process function
      * The result product type depends on underlying pipeline
      * generics.
-     *
-     * @param function Function to execution
+     * @param <R> Type of object after applying a function
+     * @param <K> Type of object returning by resulting pipeline
+     * @param function Function to execute
      * @param underlying Pipeline to process function
-     * @return Pipeline initialized with function
+     * @return Pipeline with query type {@link R} and
+     *  product type {@link K} initialized with function
      */
-    <R, K> Pipeline<R, K>
-    run(Function<H, R> function,
-        Pipeline<R, K> underlying
+    <R, K> Pipeline<R, K> run(
+        Function<H, R> function, Pipeline<R, K> underlying
     );
 
     /**
-     * Puts specified function into the pipeline
-     * @param function
-     * @return
+     * Puts specified function into the pipeline.
+     *
+     * @param function Function to execute
+     * @return Pipeline initialized with function
      */
-    Pipeline<T, H>
-    run(Function<H, T> function);
+    Pipeline<T, H> run(
+        Function<H, T> function
+    );
 
     /**
-     * Sets up service to execute queries
+     * Sets up service to execute queries.
      *
+     * @param <R> Type of object the service consumes
+     * @param <K> Type of object the service produces
      * @param service Service to execute queries
-     * @return Pipeline initialized with service
+     * @return Pipeline with query type {@link R} and
+     *  product type {@link K} initialized with service
      */
     <R, K> Pipeline<R, K> using(
         QueryExecutorService<R, K> service
     );
 
     /**
-     * Sets up callback to handle query completion
+     * Sets up callback to handle query completion.
      *
-     * @param callback to handle query completion
+     * @param callback Callback for query completion event
      * @return Pipeline initialized with callback
      */
-    Pipeline<T, H> on(
+    Pipeline<T, H> callback(
         QueryCompleteCallback<T, H> callback
     );
 
     /**
-     * Fetches exactly one product
-     * <p>
-     * If pipeline contains more than one product, which product will be returned,
-     * completely depends on implementation
+     * Fetches exactly one product.
      *
-     * @return {@link java.util.Optional} of object of type {@link H} known as product
+     * It depends on implementation which product will be
+     * returned in case of pipeline contains more than one
+     * product
+     * @return The {@link java.util.Optional} of object of
+     *  type {@link H} known as product
      */
     default Optional<H> product() {
         return Optional.empty();

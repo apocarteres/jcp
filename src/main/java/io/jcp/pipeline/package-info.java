@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015, Alexander Paderin
+ * Copyright (c) 2015-2016, decipher.ru
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -9,7 +9,7 @@
  * disclaimer. 2) Redistributions in binary form must reproduce the above
  * copyright notice, this list of conditions and the following
  * disclaimer in the documentation and/or other materials provided
- * with the distribution. 3) Neither the name of the author nor
+ * with the distribution. 3) Neither the name of the decipher.ru nor
  * the names of its contributors may be used to endorse or promote
  * products derived from this software without specific prior written
  * permission.
@@ -26,47 +26,6 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-package io.jcp.bean;
-
-public class MockTextQuery {
-    private final String request;
-
-    public MockTextQuery() {
-        this("");
-    }
-
-    public MockTextQuery(String request) {
-        this.request = request;
-    }
-
-    public String getRequest() {
-        return request;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        MockTextQuery that = (MockTextQuery) o;
-
-        if (!request.equals(that.request)) return false;
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        return request.hashCode();
-    }
-
-    @Override
-    public String toString() {
-        return "MockTextQuery{" +
-            "request='" + request + '\'' +
-            '}';
-    }
-}
+package io.jcp.pipeline;
